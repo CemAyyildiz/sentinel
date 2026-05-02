@@ -1,54 +1,43 @@
 # SentinelSwap 🛡️
 
-**Autonomous DeFi Agent powered by 0G AI**
+**Autonomous DeFi Agent Platform** - Describe your trading strategy in plain English, and let AI execute it automatically.
 
-SentinelSwap is an AI-powered DeFi strategy platform that lets you create autonomous trading strategies using natural language. The system parses your intent, estimates routes via Uniswap, and deploys strategies as on-chain agents that execute automatically when conditions are met.
+## 🏆 Hackathon Project
 
-## 🚀 Features
-
-- **Natural Language Strategies**: Describe your trading strategy in plain English or Turkish
-- **AI-Powered Parsing**: 0G AI parses your intent into executable parameters
-- **Real-Time Monitoring**: Autonomous agent checks conditions every 30 seconds
-- **Auto-Execution**: Strategies execute automatically when trigger conditions are met
-- **Multi-Action Support**: Swap, AAVE deposit/withdraw, and combined strategies
-- **Uniswap Integration**: Real-time quotes and swap execution
-- **AAVE Integration**: Lending and borrowing positions
-- **Beautiful UI**: Modern dark theme with real-time updates
+SentinelSwap is an autonomous DeFi agent that lets users create trading strategies using natural language. The AI parses your intent, validates routes via Uniswap, and executes trades automatically when conditions are met.
 
 ## 🏗️ Architecture
 
 ```
-sentinelswap/
-├── backend/           # Express.js API server
-│   └── src/
-│       ├── routes/    # API endpoints
-│       ├── services/  # Business logic
-│       └── types/     # TypeScript types
-├── frontend/          # Next.js 14 app
-│   └── src/app/       # React components
-└── .env               # Environment config
+┌─────────────────────────────────────────────────────────────────┐
+│                        SentinelSwap                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐         │
+│  │   Frontend  │───▶│   Backend   │───▶│  Uniswap    │         │
+│  │   (Next.js) │    │  (Express)  │    │    API      │         │
+│  └─────────────┘    └─────────────┘    └─────────────┘         │
+│        │                   │                                     │
+│        │                   ▼                                     │
+│        │           ┌─────────────┐                              │
+│        │           │   SQLite    │                              │
+│        │           │  Database   │                              │
+│        │           └─────────────┘                              │
+│        │                   │                                     │
+│        ▼                   ▼                                     │
+│  ┌─────────────────────────────────────┐                       │
+│  │         Autonomous Agent            │                       │
+│  │  • Monitors ETH price every 30s     │                       │
+│  │  • Evaluates trigger conditions     │                       │
+│  │  • Executes swaps via Uniswap       │                       │
+│  └─────────────────────────────────────┘                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### Backend Services
-
-- **agent.ts**: Autonomous agent that monitors and executes strategies
-- **database.ts**: SQLite-based strategy and transaction storage
-- **uniswap.ts**: Uniswap API integration for quotes and swaps
-- **aave.ts**: AAVE protocol integration for lending
-- **zeroG.ts**: 0G AI integration for strategy parsing
-- **keeperHub.ts**: Keeper network for on-chain automation
-
-### Frontend
-
-- **Next.js 14** with App Router
-- **Tailwind CSS** for styling
-- **Real-time updates** with auto-refresh
-- **Wallet connection** via MetaMask
-
-## 🛠️ Setup
+## 🚀 Quick Start
 
 ### Prerequisites
-
 - Node.js 18+
 - npm or pnpm
 
@@ -56,6 +45,7 @@ sentinelswap/
 
 ```bash
 # Clone the repository
+git clone https://github.com/your-username/sentinelswap.git
 cd sentinelswap
 
 # Install backend dependencies
@@ -65,87 +55,115 @@ npm install
 # Install frontend dependencies
 cd ../frontend
 npm install
-
-# Configure environment
-cp ../.env.example ../.env
-# Edit .env with your API keys
 ```
 
-### Running
+### Environment Setup
+
+Create `backend/.env`:
+```env
+PORT=3001
+DATABASE_URL=./sentinelswap.db
+```
+
+### Running the Application
 
 ```bash
-# Start backend (from backend/)
+# Terminal 1: Start backend
+cd backend
 npm run dev
 
-# Start frontend (from frontend/)
+# Terminal 2: Start frontend
+cd frontend
 npm run dev
 ```
 
-The app will be available at:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:3001
+Open http://localhost:3000 in your browser.
+
+## 💡 How It Works
+
+### 1. Describe Your Strategy
+Type your trading strategy in plain English:
+- "Buy ETH with 500 USDC when ETH drops below $2,400"
+- "Sell 1 ETH when price goes above $3,000"
+- "Swap 1000 USDC to ETH at best rate"
+
+### 2. AI Parses Your Intent
+The system extracts:
+- **Trigger**: Price condition (above/below target)
+- **Action**: Swap parameters (tokenIn, tokenOut, amount)
+- **Confidence**: How well the AI understood your request
+
+### 3. Review & Deploy
+Preview the parsed strategy with estimated route, gas, and price impact. Deploy when satisfied.
+
+### 4. Autonomous Execution
+The agent monitors conditions every 30 seconds and executes automatically when triggered.
+
+## 🛠️ Tech Stack
+
+### Frontend
+- **Next.js 14** - React framework
+- **Tailwind CSS** - Styling
+- **Lucide Icons** - Icon library
+
+### Backend
+- **Express.js** - API server
+- **SQLite** - Database (via better-sqlite3)
+- **TypeScript** - Type safety
+
+### Integrations
+- **Uniswap Trading API** - Price quotes and swap execution
+- **0G AI** - Natural language parsing (simulated)
 
 ## 📡 API Endpoints
 
 ### Strategies
-- `GET /api/strategies` - List all strategies
-- `POST /api/strategies/parse` - Parse natural language strategy
+- `POST /api/strategies/parse` - Parse natural language to strategy
 - `POST /api/strategies/deploy` - Deploy a strategy
-- `PATCH /api/strategies/:id/pause` - Pause a strategy
-- `PATCH /api/strategies/:id/resume` - Resume a strategy
-- `DELETE /api/strategies/:id` - Delete a strategy
+- `GET /api/strategies` - List all strategies
+- `PATCH /api/strategies/:id/pause` - Pause strategy
+- `PATCH /api/strategies/:id/resume` - Resume strategy
+- `DELETE /api/strategies/:id` - Delete strategy
 - `POST /api/strategies/:id/execute` - Execute strategy manually
-
-### Agent
-- `GET /api/agent/status` - Get agent status
-- `POST /api/agent/start` - Start the agent
-- `POST /api/agent/stop` - Stop the agent
 
 ### Market
 - `GET /api/price` - Current ETH price
-- `GET /api/pools` - Available liquidity pools
+- `GET /api/quote` - Get swap quote
 
 ### History
 - `GET /api/history` - Transaction history
 
-## 🤖 How the Agent Works
+### Agent
+- `GET /api/agent/state` - Agent status
+- `POST /api/agent/start` - Start agent
+- `POST /api/agent/stop` - Stop agent
 
-1. **Monitoring**: Agent checks active strategies every 30 seconds
-2. **Price Check**: Fetches current ETH price (with fallback)
-3. **Evaluation**: Compares current price against strategy triggers
-4. **Execution**: When conditions are met, executes the strategy action
-5. **Recording**: Logs transaction and updates strategy status
+## 🎯 Features
 
-### Supported Actions
+- ✅ Natural language strategy creation
+- ✅ Real-time ETH price monitoring
+- ✅ Uniswap route optimization
+- ✅ Autonomous trade execution
+- ✅ Transaction history tracking
+- ✅ Strategy pause/resume/delete
+- ✅ Manual execution option
+- ✅ Toast notifications
+- ✅ Responsive UI
 
-- **swap**: Token swap via Uniswap
-- **deposit**: Deposit to AAVE lending pool
-- **withdraw**: Withdraw from AAVE position
-- **swap_and_deposit**: Swap then deposit to AAVE
-- **withdraw_and_swap**: Withdraw from AAVE then swap
+## 🔮 Future Enhancements
 
-## 🎯 Example Strategies
-
-```
-"Buy ETH with 500 USDC when ETH drops below $2,400"
-"Sell 1 ETH when price goes above $3,000"
-"ETH düşünce sat, AAVE yatır"
-"ETH $3000 gelirse AAVE çek, ETH al"
-"USDC yatır AAVE'ye"
-```
-
-## 🔧 Tech Stack
-
-- **Backend**: Express.js, TypeScript, SQLite
-- **Frontend**: Next.js 14, React, Tailwind CSS
-- **AI**: 0G Network for strategy parsing
-- **DeFi**: Uniswap V4, AAVE V3
-- **Chain**: Ethereum Sepolia (testnet)
+- [ ] Multi-chain support (Arbitrum, Optimism, Base)
+- [ ] More trigger types (time-based, volume-based)
+- [ ] Portfolio tracking
+- [ ] Strategy templates
+- [ ] Social sharing of strategies
+- [ ] Advanced order types (limit, stop-loss)
+- [ ] Integration with more DEXs
 
 ## 📝 License
 
-MIT
+MIT License
 
-## 🏆 Hackathon
+## 👥 Team
 
-Built for the 0G AI Hackathon. SentinelSwap demonstrates how AI agents can autonomously manage DeFi strategies, making complex trading accessible through natural language.
+Built with ❤️ for the Hackathon

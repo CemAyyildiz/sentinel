@@ -1,6 +1,5 @@
 import { getStrategy, getAllStrategies, updateStrategyStatus, createTransaction, updateTransactionStatus } from './database';
 import { getQuote, executeSwap, getETHPrice } from './uniswap';
-import { depositToAave, withdrawFromAave } from './aave';
 import { v4 as uuidv4 } from 'uuid';
 
 interface AgentState {
@@ -139,46 +138,14 @@ async function executeStrategy(strategy: any) {
         strategy.action_params.tokenOut,
         amount
       );
-      result = await executeSwap(
+      const swapResult = await executeSwap(
         quote,
         walletAddress,
         strategy.action_params.tokenIn,
         strategy.action_params.tokenOut,
         amount
       );
-    } else if (strategy.action_type === 'deposit') {
-      // AAVE deposit
-      const depositResult = await depositToAave(
-        strategy.action_params.tokenOut,
-        strategy.action_params.amount,
-        walletAddress
-      );
-      result = { hash: depositResult.txHash, gasUsed: '150000' };
-    } else if (strategy.action_type === 'withdraw') {
-      // AAVE withdraw
-      const withdrawResult = await withdrawFromAave(
-        `pos_${strategy.id}`,
-        walletAddress
-      );
-      result = { hash: withdrawResult.txHash, gasUsed: '150000' };
-    } else if (strategy.action_type === 'swap_and_deposit') {
-      // Swap then deposit
-      const amount = convertToWei(strategy.action_params.tokenIn, strategy.action_params.amount);
-      const quote = await getQuote(strategy.action_params.tokenIn, 'USDC', amount);
-      const swapResult = await executeSwap(quote, walletAddress, strategy.action_params.tokenIn, 'USDC', amount);
-
-      // Then deposit to AAVE
-      const depositResult = await depositToAave('AAVE', '1', walletAddress);
-      result = { hash: depositResult.txHash, gasUsed: '300000' };
-    } else if (strategy.action_type === 'withdraw_and_swap') {
-      // Withdraw then swap
-      const withdrawResult = await withdrawFromAave(`pos_${strategy.id}`, walletAddress);
-
-      // Then swap
-      const amount = convertToWei('AAVE', '1');
-      const quote = await getQuote('AAVE', strategy.action_params.tokenOut, amount);
-      const swapResult = await executeSwap(quote, walletAddress, 'AAVE', strategy.action_params.tokenOut, amount);
-      result = { hash: swapResult.hash, gasUsed: '300000' };
+      result = { hash: swapResult.hash, gasUsed: '150000' };
     } else {
       throw new Error(`Unknown action type: ${strategy.action_type}`);
     }
@@ -204,8 +171,7 @@ function convertToWei(token: string, amount: string): string {
     ETH: 18,
     WETH: 18,
     USDC: 6,
-    DAI: 18,
-    AAVE: 18
+    DAI: 18
   };
 
   const d = decimals[token] || 18;
