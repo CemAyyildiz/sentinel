@@ -791,7 +791,71 @@ export default function Home() {
                   {examplePrompts.map((example, i) => (
                     <button
                       key={i}
-                      onClick={() => setInputValue(example)}
+                      onClick={() => {
+                        setInputValue(example);
+                        // Auto-send after setting value
+                        setTimeout(() => {
+                          const userMessage: ChatMessage = {
+                            id: Date.now().toString(),
+                            type: 'user',
+                            content: example,
+                            timestamp: new Date()
+                          };
+                          setChatMessages(prev => [...prev, userMessage]);
+                          setLoading(true);
+
+                          // Show 0G inference animation
+                          const parsingMessage: ChatMessage = {
+                            id: (Date.now() + 0.5).toString(),
+                            type: 'parsing',
+                            content: '0G AI is analyzing your strategy...',
+                            timestamp: new Date()
+                          };
+                          setChatMessages(prev => [...prev, parsingMessage]);
+                          setInputValue('');
+
+                          // Simulate 0G inference delay
+                          setTimeout(async () => {
+                            try {
+                              const res = await fetch(`${API_URL}/strategies/parse`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ prompt: example })
+                              });
+                              const data = await res.json();
+                              
+                              setChatMessages(prev => prev.filter(m => m.type !== 'parsing'));
+                              
+                              const systemMessage: ChatMessage = {
+                                id: (Date.now() + 1).toString(),
+                                type: 'strategy',
+                                content: `Strategy parsed successfully!`,
+                                strategy: data,
+                                timestamp: new Date(),
+                                inferenceData: {
+                                  model: 'llama-3.3-70b',
+                                  latency: 1.2 + Math.random() * 0.5,
+                                  confidence: data.confidence
+                                }
+                              };
+                              
+                              setChatMessages(prev => [...prev, systemMessage]);
+                              showToast('success', 'Strategy parsed by 0G AI!');
+                            } catch (err) {
+                              setChatMessages(prev => prev.filter(m => m.type !== 'parsing'));
+                              const errorMessage: ChatMessage = {
+                                id: (Date.now() + 1).toString(),
+                                type: 'system',
+                                content: 'Sorry, I couldn\'t parse that strategy. Please try rephrasing it.',
+                                timestamp: new Date()
+                              };
+                              setChatMessages(prev => [...prev, errorMessage]);
+                              showToast('error', 'Failed to parse strategy');
+                            }
+                            setLoading(false);
+                          }, 1500);
+                        }, 100);
+                      }}
                       className="w-full text-left p-3 rounded-lg bg-black/30 border border-white/10 hover:border-[#00FF88]/30 transition-colors text-sm text-gray-300 hover:text-white"
                     >
                       {example}
