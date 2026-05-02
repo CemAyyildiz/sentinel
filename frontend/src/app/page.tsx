@@ -253,7 +253,9 @@ export default function Home() {
   const examplePrompts = [
     "Buy ETH with 500 USDC when ETH drops below $2,400",
     "Sell 1 ETH when price goes above $3,000",
-    "Swap 100 USDC to ETH at best rate"
+    "ETH düşünce sat, AAVE yatır",
+    "ETH $3000 gelirse AAVE çek, ETH al",
+    "USDC yatır AAVE'ye"
   ];
 
   const activeStrategies = strategies.filter(s => s.status === 'active').length;

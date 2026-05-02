@@ -25,6 +25,15 @@ export interface ActionParams {
   amount: string;
 }
 
+export interface StrategyStep {
+  type: 'swap' | 'deposit' | 'withdraw';
+  tokenIn?: string;
+  tokenOut?: string;
+  amount?: string;
+  asset?: string;
+  protocol?: string;
+}
+
 export interface ParsedStrategy {
   id: string;
   name: string;
@@ -40,6 +49,7 @@ export interface ParsedStrategy {
     tokenOut: string;
     amount: string;
   };
+  steps?: StrategyStep[];
   estimatedRoute?: QuoteResult;
   confidence: number;
 }

@@ -12,6 +12,7 @@ import {
 import { parseStrategy } from '../services/zeroG';
 import { getQuote, executeSwap } from '../services/uniswap';
 import { createKeeperTask, pauseKeeperTask, resumeKeeperTask, cancelKeeperTask } from '../services/keeperHub';
+import { depositToAave, withdrawFromAave, getLendingPositions } from '../services/aave';
 
 const router = Router();
 
@@ -79,15 +80,11 @@ router.post('/deploy', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Strategy not found' });
     }
 
-    // Update wallet address if provided
     if (walletAddress) {
       strategy.wallet_address = walletAddress;
     }
 
-    // Create KeeperHub task
     const taskId = await createKeeperTask(strategy);
-
-    // Update strategy with keeper task ID
     updateStrategyStatus(strategyId, 'active', taskId);
 
     res.json({
@@ -207,24 +204,65 @@ router.post('/:id/execute', async (req: Request, res: Response) => {
       action_details: strategy.action_params
     });
 
-    // Get quote and execute swap
-    const amount = convertToWei(strategy.action_params.tokenIn, strategy.action_params.amount);
-    const quote = await getQuote(
-      strategy.action_params.tokenIn,
-      strategy.action_params.tokenOut,
-      amount
-    );
+    // Handle different action types
+    let result: { hash: string; gasUsed: string };
 
-    const result = await executeSwap(
-      quote,
-      address,
-      strategy.action_params.tokenIn,
-      strategy.action_params.tokenOut,
-      amount
-    );
+    if (strategy.action_type === 'deposit') {
+      // AAVE Deposit
+      const depositResult = await depositToAave(
+        strategy.action_params.tokenOut,
+        strategy.action_params.amount,
+        address
+      );
+      result = { hash: depositResult.txHash, gasUsed: '150000' };
+    } else if (strategy.action_type === 'withdraw') {
+      // AAVE Withdraw
+      const withdrawResult = await withdrawFromAave(
+        `pos_${strategy.id}`,
+        address
+      );
+      result = { hash: withdrawResult.txHash, gasUsed: '150000' };
+    } else if (strategy.action_type === 'swap_and_deposit') {
+      // Swap then deposit
+      const amount = convertToWei(strategy.action_params.tokenIn, strategy.action_params.amount);
+      const quote = await getQuote(
+        strategy.action_params.tokenIn,
+        'USDC',
+        amount
+      );
+      const swapResult = await executeSwap(quote, address, strategy.action_params.tokenIn, 'USDC', amount);
+      
+      // Then deposit to AAVE
+      const depositResult = await depositToAave('AAVE', '1', address);
+      result = { hash: depositResult.txHash, gasUsed: '300000' };
+    } else if (strategy.action_type === 'withdraw_and_swap') {
+      // Withdraw then swap
+      const withdrawResult = await withdrawFromAave(`pos_${strategy.id}`, address);
+      
+      // Then swap
+      const amount = convertToWei('AAVE', '1');
+      const quote = await getQuote('AAVE', strategy.action_params.tokenOut, amount);
+      const swapResult = await executeSwap(quote, address, 'AAVE', strategy.action_params.tokenOut, amount);
+      result = { hash: swapResult.hash, gasUsed: '300000' };
+    } else {
+      // Default: swap
+      const amount = convertToWei(strategy.action_params.tokenIn, strategy.action_params.amount);
+      const quote = await getQuote(
+        strategy.action_params.tokenIn,
+        strategy.action_params.tokenOut,
+        amount
+      );
+      result = await executeSwap(
+        quote,
+        address,
+        strategy.action_params.tokenIn,
+        strategy.action_params.tokenOut,
+        amount
+      );
+    }
 
     // Update transaction
-    updateTransactionStatus(txId, 'success', result.hash, quote.gasEstimate);
+    updateTransactionStatus(txId, 'success', result.hash, result.gasUsed);
 
     // Update strategy status
     updateStrategyStatus(String(req.params.id), 'executed');
@@ -232,11 +270,28 @@ router.post('/:id/execute', async (req: Request, res: Response) => {
     res.json({
       txHash: result.hash,
       status: 'success',
-      gasUsed: quote.gasEstimate
+      gasUsed: result.gasUsed
     });
   } catch (error) {
     console.error('Execute error:', error);
     res.status(500).json({ error: 'Failed to execute strategy' });
+  }
+});
+
+// GET /api/strategies/:id/lending-positions
+router.get('/:id/lending-positions', async (req: Request, res: Response) => {
+  try {
+    const strategy = getStrategy(String(req.params.id));
+    if (!strategy) {
+      return res.status(404).json({ error: 'Strategy not found' });
+    }
+
+    const address = strategy.wallet_address || '0x0000000000000000000000000000000000000000';
+    const positions = await getLendingPositions(address);
+    res.json(positions);
+  } catch (error) {
+    console.error('Get lending positions error:', error);
+    res.status(500).json({ error: 'Failed to get lending positions' });
   }
 });
 
@@ -245,7 +300,8 @@ function convertToWei(token: string, amount: string): string {
     ETH: 18,
     WETH: 18,
     USDC: 6,
-    DAI: 18
+    DAI: 18,
+    AAVE: 18
   };
 
   const d = decimals[token] || 18;

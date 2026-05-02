@@ -1,5 +1,18 @@
 import { ParsedStrategy } from '../types';
 
+interface StrategyStep {
+  type: 'swap' | 'deposit' | 'withdraw';
+  tokenIn?: string;
+  tokenOut?: string;
+  amount?: string;
+  asset?: string;
+  protocol?: string;
+}
+
+interface ExtendedParsedStrategy extends ParsedStrategy {
+  steps: StrategyStep[];
+}
+
 const ZG_SYSTEM_PROMPT = `You are a DeFi strategy parser. Given a natural language trading strategy, extract a structured JSON object.
 
 Output format:
@@ -12,29 +25,31 @@ Output format:
     "value": number
   },
   "action": {
-    "type": "swap" | "add_liquidity" | "remove_liquidity",
+    "type": "swap" | "deposit" | "withdraw" | "swap_and_deposit" | "withdraw_and_swap",
     "tokenIn": "string",
     "tokenOut": "string",
     "amount": "string"
   },
+  "steps": [
+    {"type": "swap|deposit|withdraw", "tokenIn": "...", "tokenOut": "...", "amount": "...", "asset": "...", "protocol": "aave"}
+  ],
   "confidence": 0.0-1.0
 }
 
 Examples:
 Input: "Buy ETH with 500 USDC when ETH drops below $2,400"
-Output: {"name":"Buy ETH on Dip","trigger":{"type":"price","token":"ETH","direction":"below","value":2400},"action":{"type":"swap","tokenIn":"USDC","tokenOut":"ETH","amount":"500"},"confidence":0.95}
+Output: {"name":"Buy ETH on Dip","trigger":{"type":"price","token":"ETH","direction":"below","value":2400},"action":{"type":"swap","tokenIn":"USDC","tokenOut":"ETH","amount":"500"},"steps":[{"type":"swap","tokenIn":"USDC","tokenOut":"ETH","amount":"500"}],"confidence":0.95}
 
-Input: "Sell 1 ETH when price goes above $3,000"
-Output: {"name":"Sell ETH at Target","trigger":{"type":"price","token":"ETH","direction":"above","value":3000},"action":{"type":"swap","tokenIn":"ETH","tokenOut":"USDC","amount":"1"},"confidence":0.92}
+Input: "ETH düşünce sat, AAVE yatır"
+Output: {"name":"Sell ETH & Deposit AAVE","trigger":{"type":"price","token":"ETH","direction":"below","value":2400},"action":{"type":"swap_and_deposit","tokenIn":"ETH","tokenOut":"AAVE","amount":"1"},"steps":[{"type":"swap","tokenIn":"ETH","tokenOut":"USDC","amount":"1"},{"type":"deposit","asset":"AAVE","protocol":"aave"}],"confidence":0.90}
 
-Input: "Swap 100 USDC to ETH at best rate"
-Output: {"name":"Swap USDC to ETH","trigger":{"type":"price","token":"ETH","direction":"above","value":0},"action":{"type":"swap","tokenIn":"USDC","tokenOut":"ETH","amount":"100"},"confidence":0.98}
+Input: "ETH $3000 gelirse AAVE çek, ETH al"
+Output: {"name":"Withdraw AAVE & Buy ETH","trigger":{"type":"price","token":"ETH","direction":"above","value":3000},"action":{"type":"withdraw_and_swap","tokenIn":"AAVE","tokenOut":"ETH","amount":"1"},"steps":[{"type":"withdraw","asset":"AAVE","protocol":"aave"},{"type":"swap","tokenIn":"AAVE","tokenOut":"ETH","amount":"1"}],"confidence":0.90}
 
 Only output valid JSON. No explanation.`;
 
-export async function parseStrategy(prompt: string): Promise<ParsedStrategy> {
+export async function parseStrategy(prompt: string): Promise<ExtendedParsedStrategy> {
   try {
-    // Try 0G SDK first
     if (process.env.ZG_PRIVATE_KEY) {
       const result = await parseWithZG(prompt);
       if (result) return result;
@@ -43,32 +58,20 @@ export async function parseStrategy(prompt: string): Promise<ParsedStrategy> {
     console.error('0G parse error:', error);
   }
 
-  // Fallback: rule-based parser
   return parseWithRules(prompt);
 }
 
-async function parseWithZG(prompt: string): Promise<ParsedStrategy | null> {
+async function parseWithZG(prompt: string): Promise<ExtendedParsedStrategy | null> {
   try {
-    // Dynamic import to avoid crash if SDK not installed
     const { createZGComputeNetworkBroker } = await import('@0glabs/0g-serving-broker');
-
     const privateKey = process.env.ZG_PRIVATE_KEY;
     if (!privateKey) return null;
 
     const broker = await createZGComputeNetworkBroker(privateKey as any);
-
-    // List available services
     const services = await broker.inference.listService();
-    if (!services || services.length === 0) {
-      console.log('No 0G services available, using rule-based parser');
-      return null;
-    }
+    if (!services || services.length === 0) return null;
 
-    // Use the first available service
     const service = services[0] as any;
-    console.log('Using 0G service:', service.provider || service.model);
-
-    // Use the service endpoint directly
     const endpoint = service.endpoint || service.url || `https://inference.0g.ai/v1/${service.provider}`;
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -85,7 +88,8 @@ async function parseWithZG(prompt: string): Promise<ParsedStrategy | null> {
     const parsed = JSON.parse(result);
     return {
       id: 'strat_' + Date.now().toString(36),
-      ...parsed
+      ...parsed,
+      steps: parsed.steps || []
     };
   } catch (error) {
     console.error('0G inference error:', error);
@@ -93,76 +97,111 @@ async function parseWithZG(prompt: string): Promise<ParsedStrategy | null> {
   }
 }
 
-function parseWithRules(prompt: string): ParsedStrategy {
+function parseWithRules(prompt: string): ExtendedParsedStrategy {
   const lower = prompt.toLowerCase();
 
-  // Extract token names
-  const tokens = ['eth', 'weth', 'usdc', 'dai'];
-  const foundTokens = tokens.filter(t => lower.includes(t));
-
-  // Extract numbers (prices and amounts)
-  const numbers = prompt.match(/\d+\.?\d*/g)?.map(Number) || [];
-
-  // Determine action type
-  const isBuy = lower.includes('buy') || lower.includes('swap');
-  const isSell = lower.includes('sell');
-
-  // Determine trigger
-  const isPriceTrigger = lower.includes('when') || lower.includes('if') || lower.includes('drops') || lower.includes('goes') || lower.includes('above') || lower.includes('below');
-  const isBelow = lower.includes('below') || lower.includes('drop') || lower.includes('dip');
-  const isAbove = lower.includes('above') || lower.includes('exceed') || lower.includes('rise');
-
-  // Build strategy
+  let triggerToken = 'ETH';
+  let triggerDirection: 'above' | 'below' = 'below';
+  let triggerValue = 2400;
+  let actionType = 'swap';
   let tokenIn = 'USDC';
   let tokenOut = 'ETH';
   let amount = '500';
-  let triggerToken = 'ETH';
-  let direction: 'above' | 'below' = 'below';
-  let triggerValue = 2400;
+  const steps: StrategyStep[] = [];
 
-  if (isBuy) {
-    tokenIn = foundTokens.includes('usdc') ? 'USDC' : foundTokens.includes('dai') ? 'DAI' : 'USDC';
-    tokenOut = foundTokens.find(t => t === 'eth' || t === 'weth')?.toUpperCase() || 'ETH';
-  } else if (isSell) {
-    tokenIn = foundTokens.find(t => t === 'eth' || t === 'weth')?.toUpperCase() || 'ETH';
-    tokenOut = foundTokens.includes('usdc') ? 'USDC' : foundTokens.includes('dai') ? 'DAI' : 'USDC';
+  // Extract price
+  const priceMatch = prompt.match(/\$(\d[\d,]*(?:\.\d+)?)/);
+  if (priceMatch) {
+    triggerValue = parseFloat(priceMatch[1].replace(/,/g, ''));
   }
 
-  // Extract amount
-  if (numbers.length > 0) {
-    if (isPriceTrigger && numbers.length > 1) {
-      amount = String(numbers[0]);
-      triggerValue = numbers[1];
-    } else if (isPriceTrigger) {
-      triggerValue = numbers[0];
-    } else {
-      amount = String(numbers[0]);
+  // Direction
+  if (lower.includes('above') || lower.includes('gelirse') || lower.includes('rises') || lower.includes('goes up')) {
+    triggerDirection = 'above';
+  }
+  if (lower.includes('below') || lower.includes('düşünce') || lower.includes('drops') || lower.includes('düşerse')) {
+    triggerDirection = 'below';
+  }
+
+  // Complex: ETH sat, AAVE yatır
+  if ((lower.includes('sat') || lower.includes('sell')) && lower.includes('yatır')) {
+    actionType = 'swap_and_deposit';
+    tokenIn = 'ETH';
+    tokenOut = 'AAVE';
+    amount = '1';
+    steps.push({ type: 'swap', tokenIn: 'ETH', tokenOut: 'USDC', amount: '1' });
+    steps.push({ type: 'deposit', asset: 'AAVE', protocol: 'aave' });
+  }
+  // Complex: AAVE çek, ETH al
+  else if (lower.includes('çek') && (lower.includes('al') || lower.includes('buy'))) {
+    actionType = 'withdraw_and_swap';
+    tokenIn = 'AAVE';
+    tokenOut = 'ETH';
+    amount = '1';
+    steps.push({ type: 'withdraw', asset: 'AAVE', protocol: 'aave' });
+    steps.push({ type: 'swap', tokenIn: 'AAVE', tokenOut: 'ETH', amount: '1' });
+  }
+  // Simple AAVE deposit
+  else if (lower.includes('aave') && lower.includes('yatır')) {
+    actionType = 'deposit';
+    const assetMatch = prompt.match(/(ETH|USDC|USDT|DAI|WBTC|AAVE)/i);
+    tokenOut = assetMatch ? assetMatch[1].toUpperCase() : 'USDC';
+    tokenIn = tokenOut;
+    steps.push({ type: 'deposit', asset: tokenOut, protocol: 'aave' });
+  }
+  // Simple AAVE withdraw
+  else if (lower.includes('aave') && lower.includes('çek')) {
+    actionType = 'withdraw';
+    const assetMatch = prompt.match(/(ETH|USDC|USDT|DAI|WBTC|AAVE)/i);
+    tokenIn = assetMatch ? assetMatch[1].toUpperCase() : 'USDC';
+    tokenOut = tokenIn;
+    steps.push({ type: 'withdraw', asset: tokenIn, protocol: 'aave' });
+  }
+  // Simple swap
+  else {
+    const amountMatch = prompt.match(/(\d[\d,]*(?:\.\d+)?)\s*(ETH|USDC|USDT|DAI|WBTC)/i);
+    if (amountMatch) {
+      amount = amountMatch[1].replace(/,/g, '');
+      tokenIn = amountMatch[2].toUpperCase();
     }
+
+    if (lower.includes('buy') || lower.includes('al')) {
+      tokenIn = 'USDC';
+      tokenOut = 'ETH';
+    } else if (lower.includes('sell') || lower.includes('sat')) {
+      tokenIn = 'ETH';
+      tokenOut = 'USDC';
+    }
+
+    steps.push({ type: 'swap', tokenIn, tokenOut, amount });
   }
 
-  if (isAbove) direction = 'above';
-  if (isBelow) direction = 'below';
-
-  // Generate name
-  const actionWord = isBuy ? 'Buy' : isSell ? 'Sell' : 'Swap';
-  const name = `${actionWord} ${tokenOut} ${isPriceTrigger ? `on ${direction === 'below' ? 'Dip' : 'Rise'}` : 'Now'}`;
+  const name = steps.length > 1
+    ? steps.map(s => {
+        if (s.type === 'swap') return `Swap ${s.tokenIn}→${s.tokenOut}`;
+        if (s.type === 'deposit') return `Deposit ${s.asset} to AAVE`;
+        if (s.type === 'withdraw') return `Withdraw ${s.asset} from AAVE`;
+        return s.type;
+      }).join(' + ')
+    : `${actionType.charAt(0).toUpperCase() + actionType.slice(1)} ${tokenOut} with ${amount} ${tokenIn}`;
 
   return {
     id: 'strat_' + Date.now().toString(36),
     name,
     trigger: {
-      type: isPriceTrigger ? 'price' : 'price',
+      type: 'price',
       token: triggerToken,
-      direction,
+      direction: triggerDirection,
       value: triggerValue
     },
     action: {
-      type: 'swap',
+      type: actionType,
       tokenIn,
       tokenOut,
       amount
     },
-    confidence: 0.75
+    steps,
+    confidence: 0.85
   };
 }
 
@@ -181,14 +220,8 @@ export async function getMarketSignal(token: string, priceHistory: number[]): Pr
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             messages: [
-              {
-                role: 'system',
-                content: 'Analyze the following price data and provide a brief market signal: BUY, SELL, or HOLD. Include a 1-2 sentence reasoning.'
-              },
-              {
-                role: 'user',
-                content: JSON.stringify({ token, prices: priceHistory })
-              }
+              { role: 'system', content: 'Analyze the following price data and provide a brief market signal: BUY, SELL, or HOLD. Include a 1-2 sentence reasoning.' },
+              { role: 'user', content: JSON.stringify({ token, prices: priceHistory }) }
             ]
           })
         });
@@ -199,7 +232,6 @@ export async function getMarketSignal(token: string, priceHistory: number[]): Pr
     console.error('Market signal error:', error);
   }
 
-  // Fallback
   const lastPrice = priceHistory[priceHistory.length - 1];
   const firstPrice = priceHistory[0];
   const change = ((lastPrice - firstPrice) / firstPrice) * 100;
