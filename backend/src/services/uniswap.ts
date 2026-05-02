@@ -133,7 +133,12 @@ export async function getETHPrice(): Promise<number> {
   try {
     const quote = await getQuote('USDC', 'ETH', '1000000000'); // 1000 USDC
     const ethAmount = parseFloat(quote.quote) / 1e18;
-    return 1000 / ethAmount;
+    const price = 1000 / ethAmount;
+    // Sanity check - if price is unreasonable, return fallback
+    if (price > 100000 || price < 100 || isNaN(price)) {
+      return 2400;
+    }
+    return price;
   } catch {
     return 2400; // Mock price
   }

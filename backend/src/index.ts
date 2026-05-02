@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import strategyRoutes from './routes/strategies';
 import historyRoutes from './routes/history';
 import marketRoutes from './routes/market';
+import agentRoutes from './routes/agent';
+import { startAgent } from './services/agent';
 
 dotenv.config({ path: '../.env' });
 
@@ -18,6 +20,7 @@ app.use(express.json());
 app.use('/api/strategies', strategyRoutes);
 app.use('/api/history', historyRoutes);
 app.use('/api', marketRoutes);
+app.use('/api/agent', agentRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -33,6 +36,9 @@ app.listen(PORT, () => {
   console.log(`🚀 SentinelSwap Backend running on port ${PORT}`);
   console.log(`📊 API: http://localhost:${PORT}/api`);
   console.log(`❤️  Health: http://localhost:${PORT}/api/health`);
+  
+  // Start the autonomous agent
+  startAgent();
 });
 
 export default app;

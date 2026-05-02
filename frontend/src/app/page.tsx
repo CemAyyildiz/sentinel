@@ -698,15 +698,45 @@ export default function Home() {
         )}
       </main>
 
+      {/* Agent Status */}
+      <div className="max-w-7xl mx-auto px-4 mt-8">
+        <div className="glass-card p-6 rounded-2xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center">
+                <Activity className="w-5 h-5 text-green-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold">Autonomous Agent</h3>
+                <p className="text-sm text-dark-400">Monitoring strategies every 30 seconds</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <div className="text-sm text-dark-400">Status</div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+                  <span className="text-green-400 font-medium">Running</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-dark-400">Active Strategies</div>
+                <div className="font-medium">{strategies.filter(s => s.status === 'active').length}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Footer */}
-      <footer className="border-t border-dark-700/50 mt-16">
+      <footer className="border-t border-dark-700/50 mt-8">
         <div className="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between text-sm text-dark-500">
           <div className="flex items-center gap-2">
             <Shield className="w-4 h-4" />
             <span>SentinelSwap</span>
           </div>
           <div className="flex items-center gap-4">
-            <span>Powered by 0G AI + Uniswap + KeeperHub</span>
+            <span>Powered by 0G AI + Uniswap + AAVE + Agent</span>
           </div>
         </div>
       </footer>
