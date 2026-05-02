@@ -100,6 +100,7 @@ async function parseWithZG(prompt: string): Promise<ExtendedParsedStrategy | nul
 function parseWithRules(prompt: string): ExtendedParsedStrategy {
   const lower = prompt.toLowerCase();
 
+  let triggerType: 'price' | 'time' | 'apr' | 'ai_signal' = 'price';
   let triggerToken = 'ETH';
   let triggerDirection: 'above' | 'below' = 'below';
   let triggerValue = 2400;
@@ -108,27 +109,121 @@ function parseWithRules(prompt: string): ExtendedParsedStrategy {
   let tokenOut = 'ETH';
   let amount = '500';
   const steps: StrategyStep[] = [];
+  let name = '';
 
-  // Extract price
-  const priceMatch = prompt.match(/\$(\d[\d,]*(?:\.\d+)?)/);
-  if (priceMatch) {
-    triggerValue = parseFloat(priceMatch[1].replace(/,/g, ''));
+  // Check for APR trigger
+  if (lower.includes('apr') || lower.includes('yield') || lower.includes('pool')) {
+    triggerType = 'apr';
+    const aprMatch = prompt.match(/(\d+(?:\.\d+)?)\s*%/);
+    if (aprMatch) {
+      triggerValue = parseFloat(aprMatch[1]);
+    } else {
+      triggerValue = 20;
+    }
+    triggerDirection = lower.includes('exceed') || lower.includes('above') || lower.includes('over') ? 'above' : 'below';
+    
+    // Extract pool tokens
+    const poolMatch = prompt.match(/(\w+)\/(\w+)/i);
+    if (poolMatch) {
+      triggerToken = `${poolMatch[1]}/${poolMatch[2]}`;
+    }
+    
+    // Alert action
+    actionType = 'swap';
+    tokenIn = 'USDC';
+    tokenOut = 'ETH';
+    amount = '0';
+    name = `Alert: ${triggerToken} APR ${triggerDirection} ${triggerValue}%`;
+    steps.push({ type: 'swap', tokenIn, tokenOut, amount: '0' });
   }
-
-  // Direction
-  if (lower.includes('above') || lower.includes('gelirse') || lower.includes('rises') || lower.includes('goes up')) {
-    triggerDirection = 'above';
+  // Check for price trigger with specific amount
+  else if (lower.includes('buy') || lower.includes('al')) {
+    // Extract amount and token
+    const amountMatch = prompt.match(/(\d[\d,]*(?:\.\d+)?)\s*(USDC|USDT|DAI|ETH)/i);
+    if (amountMatch) {
+      amount = amountMatch[1].replace(/,/g, '');
+      tokenIn = amountMatch[2].toUpperCase();
+    }
+    
+    // Extract target token
+    const buyMatch = prompt.match(/buy\s+(\w+)/i);
+    if (buyMatch) {
+      tokenOut = buyMatch[1].toUpperCase();
+    }
+    
+    actionType = 'swap';
+    name = `Buy ${tokenOut} with ${amount} ${tokenIn}`;
+    steps.push({ type: 'swap', tokenIn, tokenOut, amount });
   }
-  if (lower.includes('below') || lower.includes('düşünce') || lower.includes('drops') || lower.includes('düşerse')) {
-    triggerDirection = 'below';
+  // Sell action
+  else if (lower.includes('sell') || lower.includes('sat')) {
+    const amountMatch = prompt.match(/(\d[\d,]*(?:\.\d+)?)\s*(ETH|USDC|USDT|DAI)/i);
+    if (amountMatch) {
+      amount = amountMatch[1].replace(/,/g, '');
+      tokenIn = amountMatch[2].toUpperCase();
+    }
+    
+    const sellMatch = prompt.match(/sell\s+(\d[\d,]*(?:\.\d+)?)?\s*(\w+)/i);
+    if (sellMatch && !amountMatch) {
+      amount = sellMatch[1] || '1';
+      tokenIn = sellMatch[2].toUpperCase();
+    }
+    
+    tokenOut = 'USDC';
+    actionType = 'swap';
+    name = `Sell ${amount} ${tokenIn} for ${tokenOut}`;
+    steps.push({ type: 'swap', tokenIn, tokenOut, amount });
   }
-
+  // Swap action
+  else if (lower.includes('swap') || lower.includes('convert') || lower.includes('çevir')) {
+    const amountMatch = prompt.match(/(\d[\d,]*(?:\.\d+)?)\s*(ETH|USDC|USDT|DAI|WBTC)/i);
+    if (amountMatch) {
+      amount = amountMatch[1].replace(/,/g, '');
+      tokenIn = amountMatch[2].toUpperCase();
+    }
+    
+    const toMatch = prompt.match(/to\s+(\w+)/i);
+    if (toMatch) {
+      tokenOut = toMatch[1].toUpperCase();
+    }
+    
+    actionType = 'swap';
+    name = `Swap ${amount} ${tokenIn} → ${tokenOut}`;
+    steps.push({ type: 'swap', tokenIn, tokenOut, amount });
+  }
+  // AAVE deposit
+  else if (lower.includes('deposit') || lower.includes('yatır') || lower.includes('lend')) {
+    const assetMatch = prompt.match(/(\d[\d,]*(?:\.\d+)?)\s*(ETH|USDC|USDT|DAI|WBTC|AAVE)/i);
+    if (assetMatch) {
+      amount = assetMatch[1].replace(/,/g, '');
+      tokenIn = assetMatch[2].toUpperCase();
+    }
+    
+    actionType = 'deposit';
+    tokenOut = tokenIn;
+    name = `Deposit ${amount} ${tokenIn} to AAVE`;
+    steps.push({ type: 'deposit', asset: tokenIn, protocol: 'aave' });
+  }
+  // AAVE withdraw
+  else if (lower.includes('withdraw') || lower.includes('çek') || lower.includes('redeem')) {
+    const assetMatch = prompt.match(/(\d[\d,]*(?:\.\d+)?)\s*(ETH|USDC|USDT|DAI|WBTC|AAVE)/i);
+    if (assetMatch) {
+      amount = assetMatch[1].replace(/,/g, '');
+      tokenIn = assetMatch[2].toUpperCase();
+    }
+    
+    actionType = 'withdraw';
+    tokenOut = tokenIn;
+    name = `Withdraw ${amount} ${tokenIn} from AAVE`;
+    steps.push({ type: 'withdraw', asset: tokenIn, protocol: 'aave' });
+  }
   // Complex: ETH sat, AAVE yatır
-  if ((lower.includes('sat') || lower.includes('sell')) && lower.includes('yatır')) {
+  else if ((lower.includes('sat') || lower.includes('sell')) && lower.includes('yatır')) {
     actionType = 'swap_and_deposit';
     tokenIn = 'ETH';
     tokenOut = 'AAVE';
     amount = '1';
+    name = 'Sell ETH & Deposit AAVE';
     steps.push({ type: 'swap', tokenIn: 'ETH', tokenOut: 'USDC', amount: '1' });
     steps.push({ type: 'deposit', asset: 'AAVE', protocol: 'aave' });
   }
@@ -138,68 +233,73 @@ function parseWithRules(prompt: string): ExtendedParsedStrategy {
     tokenIn = 'AAVE';
     tokenOut = 'ETH';
     amount = '1';
+    name = 'Withdraw AAVE & Buy ETH';
     steps.push({ type: 'withdraw', asset: 'AAVE', protocol: 'aave' });
     steps.push({ type: 'swap', tokenIn: 'AAVE', tokenOut: 'ETH', amount: '1' });
   }
-  // Simple AAVE deposit
-  else if (lower.includes('aave') && lower.includes('yatır')) {
-    actionType = 'deposit';
-    const assetMatch = prompt.match(/(ETH|USDC|USDT|DAI|WBTC|AAVE)/i);
-    tokenOut = assetMatch ? assetMatch[1].toUpperCase() : 'USDC';
-    tokenIn = tokenOut;
-    steps.push({ type: 'deposit', asset: tokenOut, protocol: 'aave' });
-  }
-  // Simple AAVE withdraw
-  else if (lower.includes('aave') && lower.includes('çek')) {
-    actionType = 'withdraw';
-    const assetMatch = prompt.match(/(ETH|USDC|USDT|DAI|WBTC|AAVE)/i);
-    tokenIn = assetMatch ? assetMatch[1].toUpperCase() : 'USDC';
-    tokenOut = tokenIn;
-    steps.push({ type: 'withdraw', asset: tokenIn, protocol: 'aave' });
-  }
-  // Simple swap
+  // Default: try to extract any swap-like pattern
   else {
     const amountMatch = prompt.match(/(\d[\d,]*(?:\.\d+)?)\s*(ETH|USDC|USDT|DAI|WBTC)/i);
     if (amountMatch) {
       amount = amountMatch[1].replace(/,/g, '');
       tokenIn = amountMatch[2].toUpperCase();
     }
-
-    if (lower.includes('buy') || lower.includes('al')) {
-      tokenIn = 'USDC';
-      tokenOut = 'ETH';
-      actionType = 'buy';
-    } else if (lower.includes('sell') || lower.includes('sat')) {
-      tokenIn = 'ETH';
-      tokenOut = 'USDC';
-      actionType = 'sell';
+    
+    if (lower.includes('to') || lower.includes('→')) {
+      const toMatch = prompt.match(/(?:to|→)\s*(\w+)/i);
+      if (toMatch) {
+        tokenOut = toMatch[1].toUpperCase();
+      }
     }
-
+    
+    actionType = 'swap';
+    name = `Swap ${amount} ${tokenIn} → ${tokenOut}`;
     steps.push({ type: 'swap', tokenIn, tokenOut, amount });
   }
 
-  // Generate human-readable name
-  let name: string;
-  if (steps.length > 1) {
-    name = steps.map(s => {
-      if (s.type === 'swap') return `Swap ${s.tokenIn}→${s.tokenOut}`;
-      if (s.type === 'deposit') return `Deposit ${s.asset} to AAVE`;
-      if (s.type === 'withdraw') return `Withdraw ${s.asset} from AAVE`;
-      return s.type;
-    }).join(' + ');
-  } else if (actionType === 'buy') {
-    name = `Buy ${tokenOut} with ${amount} ${tokenIn}`;
-  } else if (actionType === 'sell') {
-    name = `Sell ${amount} ${tokenIn} for ${tokenOut}`;
-  } else {
-    name = `Swap ${amount} ${tokenIn} → ${tokenOut}`;
+  // Extract price trigger if present
+  const priceMatch = prompt.match(/\$(\d[\d,]*(?:\.\d+)?)/);
+  if (priceMatch) {
+    triggerValue = parseFloat(priceMatch[1].replace(/,/g, ''));
+  }
+
+  // Direction
+  if (lower.includes('above') || lower.includes('gelirse') || lower.includes('rises') || lower.includes('goes up') || lower.includes('exceed')) {
+    triggerDirection = 'above';
+  }
+  if (lower.includes('below') || lower.includes('düşünce') || lower.includes('drops') || lower.includes('düşerse')) {
+    triggerDirection = 'below';
+  }
+
+  // Extract trigger token from price context
+  const tokenMatch = prompt.match(/(ETH|BTC|USDC|USDT|DAI|AAVE|WBTC)/i);
+  if (tokenMatch && triggerType === 'price') {
+    triggerToken = tokenMatch[1].toUpperCase();
+  }
+
+  // Generate name if not set
+  if (!name) {
+    if (steps.length > 1) {
+      name = steps.map(s => {
+        if (s.type === 'swap') return `Swap ${s.tokenIn}→${s.tokenOut}`;
+        if (s.type === 'deposit') return `Deposit ${s.asset} to AAVE`;
+        if (s.type === 'withdraw') return `Withdraw ${s.asset} from AAVE`;
+        return s.type;
+      }).join(' + ');
+    } else if (actionType === 'buy') {
+      name = `Buy ${tokenOut} with ${amount} ${tokenIn}`;
+    } else if (actionType === 'sell') {
+      name = `Sell ${amount} ${tokenIn} for ${tokenOut}`;
+    } else {
+      name = `Swap ${amount} ${tokenIn} → ${tokenOut}`;
+    }
   }
 
   return {
     id: 'strat_' + Date.now().toString(36),
     name,
     trigger: {
-      type: 'price',
+      type: triggerType,
       token: triggerToken,
       direction: triggerDirection,
       value: triggerValue

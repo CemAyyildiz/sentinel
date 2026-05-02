@@ -593,20 +593,28 @@ export default function Home() {
                                 <Cpu className="w-4 h-4 text-blue-400" />
                                 <span className="text-xs font-medium text-blue-300">0G AI Inference</span>
                               </div>
-                              <div className="grid grid-cols-3 gap-2 text-center">
+                              <div className="grid grid-cols-2 gap-2 text-center mb-2">
                                 <div>
                                   <div className="text-xs text-gray-500">Model</div>
                                   <div className="text-xs font-mono text-blue-300">{msg.inferenceData.model}</div>
-                                </div>
-                                <div>
-                                  <div className="text-xs text-gray-500">Latency</div>
-                                  <div className="text-xs font-mono text-blue-300">{msg.inferenceData.latency.toFixed(1)}s</div>
                                 </div>
                                 <div>
                                   <div className="text-xs text-gray-500">Confidence</div>
                                   <div className="text-xs font-mono text-blue-300">{(msg.inferenceData.confidence * 100).toFixed(0)}%</div>
                                 </div>
                               </div>
+                              {msg.strategy && (
+                                <div className="mt-2 p-2 rounded bg-black/30 border border-white/5">
+                                  <div className="text-xs text-gray-500 mb-1">Parsed Output:</div>
+                                  <pre className="text-xs font-mono text-green-300 whitespace-pre-wrap overflow-x-auto">
+{JSON.stringify({
+  name: msg.strategy.name,
+  trigger: msg.strategy.trigger,
+  action: msg.strategy.action
+}, null, 2)}
+                                  </pre>
+                                </div>
+                              )}
                               <div className="mt-2 flex items-center gap-1 text-xs text-green-400">
                                 <Network className="w-3 h-3" />
                                 <span>Decentralized inference ✓</span>

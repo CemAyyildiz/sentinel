@@ -45,9 +45,45 @@ export async function getQuote(
     };
   } catch (error) {
     console.error('Uniswap quote error:', error);
-    // Return mock data for development
+    // Calculate realistic mock quote based on ETH price
+    const ethPrice = 2400;
+    const amountNum = parseFloat(amount) || 0;
+    let quoteAmount = '0';
+    
+    // USDC has 6 decimals, ETH has 18 decimals
+    if (tokenIn === 'USDC' && tokenOut === 'ETH') {
+      // USDC amount is in 6 decimals, convert to ETH in 18 decimals
+      const usdcAmount = amountNum / 1e6; // Convert from 6 decimals
+      const ethAmount = usdcAmount / ethPrice;
+      quoteAmount = (ethAmount * 1e18).toString(); // Convert to 18 decimals
+    } else if (tokenIn === 'ETH' && tokenOut === 'USDC') {
+      // ETH amount is in 18 decimals, convert to USDC in 6 decimals
+      const ethAmount = amountNum / 1e18; // Convert from 18 decimals
+      const usdcAmount = ethAmount * ethPrice;
+      quoteAmount = (usdcAmount * 1e6).toString(); // Convert to 6 decimals
+    } else if (tokenIn === 'USDT' && tokenOut === 'ETH') {
+      const usdtAmount = amountNum / 1e6;
+      const ethAmount = usdtAmount / ethPrice;
+      quoteAmount = (ethAmount * 1e18).toString();
+    } else if (tokenIn === 'ETH' && tokenOut === 'USDT') {
+      const ethAmount = amountNum / 1e18;
+      const usdtAmount = ethAmount * ethPrice;
+      quoteAmount = (usdtAmount * 1e6).toString();
+    } else if (tokenIn === 'DAI' && tokenOut === 'ETH') {
+      const daiAmount = amountNum / 1e18;
+      const ethAmount = daiAmount / ethPrice;
+      quoteAmount = (ethAmount * 1e18).toString();
+    } else if (tokenIn === 'ETH' && tokenOut === 'DAI') {
+      const ethAmount = amountNum / 1e18;
+      const daiAmount = ethAmount * ethPrice;
+      quoteAmount = (daiAmount * 1e18).toString();
+    } else {
+      // Default: assume same decimals
+      quoteAmount = amount;
+    }
+    
     return {
-      quote: amount,
+      quote: quoteAmount,
       gasEstimate: '150000',
       priceImpact: '0.01',
       route: [tokenInAddress, tokenOutAddress]
