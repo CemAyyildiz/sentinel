@@ -32,6 +32,8 @@ yarn-error.log*
 # SQLite
 *.db
 *.sqlite
+*.db-shm
+*.db-wal
 
 # Misc
 *.tsbuildinfo
