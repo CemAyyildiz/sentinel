@@ -39,6 +39,25 @@ router.post('/parse', async (req: Request, res: Response) => {
       console.error('Quote fetch failed:', quoteError);
     }
 
+    // Save to database
+    createStrategy({
+      id: parsed.id,
+      name: parsed.name,
+      prompt: prompt,
+      trigger_type: parsed.trigger.type,
+      trigger_params: {
+        token: parsed.trigger.token,
+        direction: parsed.trigger.direction,
+        value: parsed.trigger.value
+      },
+      action_type: parsed.action.type,
+      action_params: {
+        tokenIn: parsed.action.tokenIn,
+        tokenOut: parsed.action.tokenOut,
+        amount: parsed.action.amount
+      }
+    });
+
     res.json(parsed);
   } catch (error) {
     console.error('Parse error:', error);
