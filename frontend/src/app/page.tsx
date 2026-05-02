@@ -662,7 +662,9 @@ export default function Home() {
                                     </div>
                                     <div className="text-center">
                                       <div className="text-lg font-bold text-[#00FF88]">
-                                        {(parseFloat(msg.strategy.estimatedRoute.quote) / 1e18).toFixed(4)}
+                                        {msg.strategy.action.tokenOut === 'USDC' 
+                                          ? (parseFloat(msg.strategy.estimatedRoute.quote) / 1e6).toFixed(2)
+                                          : (parseFloat(msg.strategy.estimatedRoute.quote) / 1e18).toFixed(4)}
                                       </div>
                                       <div className="text-xs text-gray-400">{msg.strategy.action.tokenOut}</div>
                                     </div>
@@ -681,7 +683,9 @@ export default function Home() {
                                     <div>
                                       <div className="text-xs text-gray-500">Min Output</div>
                                       <div className="text-sm font-mono text-green-400">
-                                        {((parseFloat(msg.strategy.estimatedRoute.quote) / 1e18) * 0.995).toFixed(4)}
+                                        {msg.strategy.action.tokenOut === 'USDC'
+                                          ? ((parseFloat(msg.strategy.estimatedRoute.quote) / 1e6) * 0.995).toFixed(2)
+                                          : ((parseFloat(msg.strategy.estimatedRoute.quote) / 1e18) * 0.995).toFixed(4)}
                                       </div>
                                     </div>
                                   </div>
