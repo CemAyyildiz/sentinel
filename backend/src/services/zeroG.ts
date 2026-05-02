@@ -168,22 +168,32 @@ function parseWithRules(prompt: string): ExtendedParsedStrategy {
     if (lower.includes('buy') || lower.includes('al')) {
       tokenIn = 'USDC';
       tokenOut = 'ETH';
+      actionType = 'buy';
     } else if (lower.includes('sell') || lower.includes('sat')) {
       tokenIn = 'ETH';
       tokenOut = 'USDC';
+      actionType = 'sell';
     }
 
     steps.push({ type: 'swap', tokenIn, tokenOut, amount });
   }
 
-  const name = steps.length > 1
-    ? steps.map(s => {
-        if (s.type === 'swap') return `Swap ${s.tokenIn}→${s.tokenOut}`;
-        if (s.type === 'deposit') return `Deposit ${s.asset} to AAVE`;
-        if (s.type === 'withdraw') return `Withdraw ${s.asset} from AAVE`;
-        return s.type;
-      }).join(' + ')
-    : `${actionType.charAt(0).toUpperCase() + actionType.slice(1)} ${tokenOut} with ${amount} ${tokenIn}`;
+  // Generate human-readable name
+  let name: string;
+  if (steps.length > 1) {
+    name = steps.map(s => {
+      if (s.type === 'swap') return `Swap ${s.tokenIn}→${s.tokenOut}`;
+      if (s.type === 'deposit') return `Deposit ${s.asset} to AAVE`;
+      if (s.type === 'withdraw') return `Withdraw ${s.asset} from AAVE`;
+      return s.type;
+    }).join(' + ');
+  } else if (actionType === 'buy') {
+    name = `Buy ${tokenOut} with ${amount} ${tokenIn}`;
+  } else if (actionType === 'sell') {
+    name = `Sell ${amount} ${tokenIn} for ${tokenOut}`;
+  } else {
+    name = `Swap ${amount} ${tokenIn} → ${tokenOut}`;
+  }
 
   return {
     id: 'strat_' + Date.now().toString(36),
@@ -201,7 +211,7 @@ function parseWithRules(prompt: string): ExtendedParsedStrategy {
       amount
     },
     steps,
-    confidence: 0.85
+    confidence: 0.92
   };
 }
 

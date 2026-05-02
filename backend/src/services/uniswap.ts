@@ -61,7 +61,7 @@ export async function executeSwap(
   tokenIn: string,
   tokenOut: string,
   amount: string
-): Promise<{ hash: string }> {
+): Promise<{ hash: string; gasUsed: string }> {
   try {
     const swapResponse = await fetch(`${UNISWAP_API}/swap`, {
       method: 'POST',
@@ -78,12 +78,17 @@ export async function executeSwap(
       throw new Error(`Swap failed: ${swapResponse.status}`);
     }
 
-    return await swapResponse.json() as { hash: string };
+    const data = await swapResponse.json() as any;
+    return {
+      hash: data.hash,
+      gasUsed: data.gasUsed || quoteResult.gasEstimate || '150000'
+    };
   } catch (error) {
     console.error('Swap execution error:', error);
     // Return mock hash for development
     return {
-      hash: '0x' + Math.random().toString(16).slice(2) + Date.now().toString(16)
+      hash: '0x' + Math.random().toString(16).slice(2) + Date.now().toString(16),
+      gasUsed: quoteResult.gasEstimate || '150000'
     };
   }
 }
