@@ -55,22 +55,33 @@ async function parseWithZG(prompt: string): Promise<ParsedStrategy | null> {
     const privateKey = process.env.ZG_PRIVATE_KEY;
     if (!privateKey) return null;
 
-    // Note: In production, you'd use ethers Wallet
     const broker = await createZGComputeNetworkBroker(privateKey as any);
 
-    const services = await broker.inference.listServices();
-    if (!services || services.length === 0) return null;
+    // List available services
+    const services = await broker.inference.listService();
+    if (!services || services.length === 0) {
+      console.log('No 0G services available, using rule-based parser');
+      return null;
+    }
 
-    const modelEndpoint = services[0].endpoint;
+    // Use the first available service
+    const service = services[0] as any;
+    console.log('Using 0G service:', service.provider || service.model);
 
-    const result = await broker.inference.chat({
-      model: modelEndpoint,
-      messages: [
-        { role: 'system', content: ZG_SYSTEM_PROMPT },
-        { role: 'user', content: prompt }
-      ]
+    // Use the service endpoint directly
+    const endpoint = service.endpoint || service.url || `https://inference.0g.ai/v1/${service.provider}`;
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [
+          { role: 'system', content: ZG_SYSTEM_PROMPT },
+          { role: 'user', content: prompt }
+        ]
+      })
     });
 
+    const result = await response.text();
     const parsed = JSON.parse(result);
     return {
       id: 'strat_' + Date.now().toString(36),
@@ -160,23 +171,28 @@ export async function getMarketSignal(token: string, priceHistory: number[]): Pr
     if (process.env.ZG_PRIVATE_KEY) {
       const { createZGComputeNetworkBroker } = await import('@0glabs/0g-serving-broker');
       const broker = await createZGComputeNetworkBroker(process.env.ZG_PRIVATE_KEY as any);
-      const services = await broker.inference.listServices();
+      const services = await broker.inference.listService();
 
       if (services && services.length > 0) {
-        const result = await broker.inference.chat({
-          model: services[0].endpoint,
-          messages: [
-            {
-              role: 'system',
-              content: 'Analyze the following price data and provide a brief market signal: BUY, SELL, or HOLD. Include a 1-2 sentence reasoning.'
-            },
-            {
-              role: 'user',
-              content: JSON.stringify({ token, prices: priceHistory })
-            }
-          ]
+        const svc = services[0] as any;
+        const endpoint = svc.endpoint || svc.url || `https://inference.0g.ai/v1/${svc.provider}`;
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: [
+              {
+                role: 'system',
+                content: 'Analyze the following price data and provide a brief market signal: BUY, SELL, or HOLD. Include a 1-2 sentence reasoning.'
+              },
+              {
+                role: 'user',
+                content: JSON.stringify({ token, prices: priceHistory })
+              }
+            ]
+          })
         });
-        return result;
+        return await response.text();
       }
     }
   } catch (error) {

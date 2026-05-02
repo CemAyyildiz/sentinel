@@ -96,7 +96,7 @@ router.get('/', (req: Request, res: Response) => {
 // GET /api/strategies/:id
 router.get('/:id', (req: Request, res: Response) => {
   try {
-    const strategy = getStrategy(req.params.id);
+    const strategy = getStrategy(String(req.params.id));
     if (!strategy) {
       return res.status(404).json({ error: 'Strategy not found' });
     }
@@ -110,7 +110,7 @@ router.get('/:id', (req: Request, res: Response) => {
 // PATCH /api/strategies/:id/pause
 router.patch('/:id/pause', async (req: Request, res: Response) => {
   try {
-    const strategy = getStrategy(req.params.id);
+    const strategy = getStrategy(String(req.params.id));
     if (!strategy) {
       return res.status(404).json({ error: 'Strategy not found' });
     }
@@ -119,7 +119,7 @@ router.patch('/:id/pause', async (req: Request, res: Response) => {
       await pauseKeeperTask(strategy.keeper_task_id);
     }
 
-    updateStrategyStatus(req.params.id, 'paused');
+    updateStrategyStatus(String(req.params.id), 'paused');
     res.json({ status: 'paused' });
   } catch (error) {
     console.error('Pause error:', error);
@@ -130,7 +130,7 @@ router.patch('/:id/pause', async (req: Request, res: Response) => {
 // PATCH /api/strategies/:id/resume
 router.patch('/:id/resume', async (req: Request, res: Response) => {
   try {
-    const strategy = getStrategy(req.params.id);
+    const strategy = getStrategy(String(req.params.id));
     if (!strategy) {
       return res.status(404).json({ error: 'Strategy not found' });
     }
@@ -139,7 +139,7 @@ router.patch('/:id/resume', async (req: Request, res: Response) => {
       await resumeKeeperTask(strategy.keeper_task_id);
     }
 
-    updateStrategyStatus(req.params.id, 'active');
+    updateStrategyStatus(String(req.params.id), 'active');
     res.json({ status: 'active' });
   } catch (error) {
     console.error('Resume error:', error);
@@ -150,7 +150,7 @@ router.patch('/:id/resume', async (req: Request, res: Response) => {
 // DELETE /api/strategies/:id
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const strategy = getStrategy(req.params.id);
+    const strategy = getStrategy(String(req.params.id));
     if (!strategy) {
       return res.status(404).json({ error: 'Strategy not found' });
     }
@@ -159,7 +159,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
       await cancelKeeperTask(strategy.keeper_task_id);
     }
 
-    deleteStrategy(req.params.id);
+    deleteStrategy(String(req.params.id));
     res.json({ deleted: true });
   } catch (error) {
     console.error('Delete error:', error);
@@ -170,7 +170,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
 // POST /api/strategies/:id/execute (Manual trigger for demo)
 router.post('/:id/execute', async (req: Request, res: Response) => {
   try {
-    const strategy = getStrategy(req.params.id);
+    const strategy = getStrategy(String(req.params.id));
     if (!strategy) {
       return res.status(404).json({ error: 'Strategy not found' });
     }
@@ -182,7 +182,7 @@ router.post('/:id/execute', async (req: Request, res: Response) => {
     const txId = uuidv4();
     createTransaction({
       id: txId,
-      strategy_id: req.params.id,
+      strategy_id: String(req.params.id),
       status: 'pending',
       action_type: strategy.action_type,
       action_details: strategy.action_params
@@ -208,7 +208,7 @@ router.post('/:id/execute', async (req: Request, res: Response) => {
     updateTransactionStatus(txId, 'success', result.hash, quote.gasEstimate);
 
     // Update strategy status
-    updateStrategyStatus(req.params.id, 'executed');
+    updateStrategyStatus(String(req.params.id), 'executed');
 
     res.json({
       txHash: result.hash,

@@ -17,7 +17,7 @@ router.get('/', (req: Request, res: Response) => {
 // GET /api/history/:strategyId
 router.get('/:strategyId', (req: Request, res: Response) => {
   try {
-    const transactions = getTransactionsByStrategy(req.params.strategyId);
+    const transactions = getTransactionsByStrategy(String(req.params.strategyId));
     res.json(transactions);
   } catch (error) {
     console.error('Get strategy history error:', error);

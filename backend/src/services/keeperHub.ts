@@ -42,7 +42,7 @@ export async function createKeeperTask(strategy: Strategy): Promise<string> {
     }
 
     const data = await response.json();
-    return data.taskId || data.id;
+    return (data as any).taskId || (data as any).id;
   } catch (error) {
     console.error('KeeperHub create task error:', error);
 
@@ -70,7 +70,7 @@ export async function getKeeperTaskStatus(taskId: string): Promise<KeeperTask | 
       throw new Error(`KeeperHub error: ${response.status}`);
     }
 
-    return await response.json();
+    return await response.json() as KeeperTask;
   } catch (error) {
     console.error('KeeperHub get task error:', error);
 
@@ -139,7 +139,7 @@ export async function getAllKeeperTasks(): Promise<KeeperTask[]> {
       throw new Error(`KeeperHub error: ${response.status}`);
     }
 
-    return await response.json();
+    return await response.json() as KeeperTask[];
   } catch (error) {
     console.error('KeeperHub list tasks error:', error);
 

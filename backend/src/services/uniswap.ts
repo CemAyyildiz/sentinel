@@ -38,10 +38,10 @@ export async function getQuote(
     const data = await response.json();
 
     return {
-      quote: data.quote?.amount || '0',
-      gasEstimate: data.gasUseEstimate || '0',
-      priceImpact: data.priceImpact || '0',
-      route: data.route?.map((r: any) => r.address) || []
+      quote: (data as any).quote?.amount || '0',
+      gasEstimate: (data as any).gasUseEstimate || '0',
+      priceImpact: (data as any).priceImpact || '0',
+      route: (data as any).route?.map((r: any) => r.address) || []
     };
   } catch (error) {
     console.error('Uniswap quote error:', error);
@@ -78,7 +78,7 @@ export async function executeSwap(
       throw new Error(`Swap failed: ${swapResponse.status}`);
     }
 
-    return await swapResponse.json();
+    return await swapResponse.json() as { hash: string };
   } catch (error) {
     console.error('Swap execution error:', error);
     // Return mock hash for development
@@ -111,7 +111,7 @@ export async function getPools(
     }
 
     const data = await response.json();
-    return data.pools || [];
+    return (data as any).pools || [];
   } catch (error) {
     console.error('Pools fetch error:', error);
     // Return mock data
