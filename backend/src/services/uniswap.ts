@@ -44,23 +44,26 @@ export async function getQuote(
       route: (data as any).route?.map((r: any) => r.address) || []
     };
   } catch (error) {
-    console.error('Uniswap quote error:', error);
-    // Calculate realistic mock quote based on ETH price
-    const ethPrice = 2400;
+    console.error('[Uniswap] Quote API failed, using CoinGecko fallback:', error);
+    
+    // Fallback: calculate quote using REAL ETH price from CoinGecko
+    const ethPrice = await getETHPrice();
+    console.log(`[Uniswap Fallback] Using real ETH price: $${ethPrice}`);
+    
     const amountNum = parseFloat(amount) || 0;
     let quoteAmount = '0';
     
     // USDC has 6 decimals, ETH has 18 decimals
     if (tokenIn === 'USDC' && tokenOut === 'ETH') {
-      // USDC amount is in 6 decimals, convert to ETH in 18 decimals
-      const usdcAmount = amountNum / 1e6; // Convert from 6 decimals
+      const usdcAmount = amountNum / 1e6;
       const ethAmount = usdcAmount / ethPrice;
-      quoteAmount = (ethAmount * 1e18).toString(); // Convert to 18 decimals
+      quoteAmount = (ethAmount * 1e18).toString();
+      console.log(`[Uniswap Fallback] ${usdcAmount} USDC / $${ethPrice} = ${ethAmount} ETH`);
     } else if (tokenIn === 'ETH' && tokenOut === 'USDC') {
-      // ETH amount is in 18 decimals, convert to USDC in 6 decimals
-      const ethAmount = amountNum / 1e18; // Convert from 18 decimals
+      const ethAmount = amountNum / 1e18;
       const usdcAmount = ethAmount * ethPrice;
-      quoteAmount = (usdcAmount * 1e6).toString(); // Convert to 6 decimals
+      quoteAmount = (usdcAmount * 1e6).toString();
+      console.log(`[Uniswap Fallback] ${ethAmount} ETH * $${ethPrice} = ${usdcAmount} USDC`);
     } else if (tokenIn === 'USDT' && tokenOut === 'ETH') {
       const usdtAmount = amountNum / 1e6;
       const ethAmount = usdtAmount / ethPrice;
@@ -78,7 +81,6 @@ export async function getQuote(
       const daiAmount = ethAmount * ethPrice;
       quoteAmount = (daiAmount * 1e18).toString();
     } else {
-      // Default: assume same decimals
       quoteAmount = amount;
     }
     
@@ -171,16 +173,22 @@ export async function getPools(
 }
 
 export async function getETHPrice(): Promise<number> {
+  // Use CoinGecko as primary price source (free, no API key needed)
   try {
-    const quote = await getQuote('USDC', 'ETH', '1000000000'); // 1000 USDC
-    const ethAmount = parseFloat(quote.quote) / 1e18;
-    const price = 1000 / ethAmount;
-    // Sanity check - if price is unreasonable, return fallback
-    if (price > 100000 || price < 100 || isNaN(price)) {
-      return 2400;
+    console.log('[CoinGecko] Fetching real ETH price...');
+    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+    if (!res.ok) {
+      throw new Error(`CoinGecko API error: ${res.status}`);
     }
+    const data = await res.json() as { ethereum: { usd: number } };
+    const price = data.ethereum?.usd;
+    if (!price || price > 100000 || price < 100) {
+      throw new Error(`Invalid price from CoinGecko: ${price}`);
+    }
+    console.log(`[CoinGecko] ETH price: $${price}`);
     return price;
-  } catch {
-    return 2400; // Mock price
+  } catch (error) {
+    console.error('[CoinGecko] Failed to fetch ETH price:', error);
+    throw new Error('Unable to fetch real ETH price. CoinGecko API is unavailable.');
   }
 }

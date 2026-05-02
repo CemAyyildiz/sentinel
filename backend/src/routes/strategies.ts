@@ -10,7 +10,7 @@ import {
   updateTransactionStatus
 } from '../services/database';
 import { parseStrategy } from '../services/zeroG';
-import { getQuote, executeSwap } from '../services/uniswap';
+import { getQuote, executeSwap, getETHPrice } from '../services/uniswap';
 import { createKeeperTask, pauseKeeperTask, resumeKeeperTask, cancelKeeperTask } from '../services/keeperHub';
 import { depositToAave, withdrawFromAave, getLendingPositions } from '../services/aave';
 
@@ -26,40 +26,48 @@ router.post('/parse', async (req: Request, res: Response) => {
     }
 
     const parsed = await parseStrategy(prompt);
+    console.log('[Parse] Strategy parsed:', JSON.stringify(parsed, null, 2));
 
-    // Get quote for the parsed strategy
-    try {
-      const amount = convertToWei(parsed.action.tokenIn, parsed.action.amount);
-      const quote = await getQuote(
-        parsed.action.tokenIn,
-        parsed.action.tokenOut,
-        amount
-      );
-      parsed.estimatedRoute = quote;
-    } catch (quoteError) {
-      console.error('Quote fetch failed, using calculated fallback:', quoteError);
-      // Fallback: calculate estimated output based on current ETH price
-      const ethPrice = 2400; // Current ETH price
-      const amountNum = parseFloat(parsed.action.amount);
-      let estimatedOutput: string;
-      
-      if (parsed.action.tokenIn === 'USDC' && parsed.action.tokenOut === 'ETH') {
-        // USDC to ETH: amount / price
-        estimatedOutput = ((amountNum / ethPrice) * 1e18).toFixed(0);
-      } else if (parsed.action.tokenIn === 'ETH' && parsed.action.tokenOut === 'USDC') {
-        // ETH to USDC: amount * price
-        estimatedOutput = ((amountNum * ethPrice) * 1e6).toFixed(0);
-      } else {
-        // Default fallback
-        estimatedOutput = (amountNum * 0.99 * 1e18).toFixed(0);
+    // Only get quote for swap strategies, NOT for alerts
+    if (parsed.action.type === 'swap' && parsed.action.tokenIn && parsed.action.tokenOut && parsed.action.amount) {
+      try {
+        const amount = convertToWei(parsed.action.tokenIn, parsed.action.amount);
+        console.log(`[Parse] Fetching quote: ${parsed.action.tokenIn} -> ${parsed.action.tokenOut}, amount: ${amount}`);
+        const quote = await getQuote(
+          parsed.action.tokenIn,
+          parsed.action.tokenOut,
+          amount
+        );
+        parsed.estimatedRoute = quote;
+        console.log('[Parse] Quote received:', JSON.stringify(quote));
+      } catch (quoteError) {
+        console.error('[Parse] Quote API failed, using CoinGecko fallback:', quoteError);
+        // Fallback: calculate estimated output based on REAL ETH price from CoinGecko
+        const ethPrice = await getETHPrice();
+        console.log(`[Parse] Using real ETH price: $${ethPrice}`);
+        const amountNum = parseFloat(parsed.action.amount);
+        let estimatedOutput: string;
+        
+        if (parsed.action.tokenIn === 'USDC' && parsed.action.tokenOut === 'ETH') {
+          estimatedOutput = ((amountNum / ethPrice) * 1e18).toFixed(0);
+          console.log(`[Parse] ${amountNum} USDC / $${ethPrice} = ${(amountNum / ethPrice).toFixed(6)} ETH`);
+        } else if (parsed.action.tokenIn === 'ETH' && parsed.action.tokenOut === 'USDC') {
+          estimatedOutput = ((amountNum * ethPrice) * 1e6).toFixed(0);
+          console.log(`[Parse] ${amountNum} ETH * $${ethPrice} = ${(amountNum * ethPrice).toFixed(2)} USDC`);
+        } else {
+          estimatedOutput = (amountNum * 0.99 * 1e18).toFixed(0);
+        }
+        
+        parsed.estimatedRoute = {
+          quote: estimatedOutput,
+          gasEstimate: '150000',
+          priceImpact: '0.05',
+          route: [parsed.action.tokenIn, parsed.action.tokenOut]
+        };
       }
-      
-      parsed.estimatedRoute = {
-        quote: estimatedOutput,
-        gasEstimate: '150000',
-        priceImpact: '0.05',
-        route: [parsed.action.tokenIn, parsed.action.tokenOut]
-      };
+    } else if (parsed.action.type === 'alert') {
+      console.log('[Parse] Alert strategy - skipping quote fetch');
+      parsed.estimatedRoute = undefined;
     }
 
     // Save to database
@@ -266,6 +274,13 @@ router.post('/:id/execute', async (req: Request, res: Response) => {
       const quote = await getQuote('AAVE', strategy.action_params.tokenOut, amount);
       const swapResult = await executeSwap(quote, address, 'AAVE', strategy.action_params.tokenOut, amount);
       result = { hash: swapResult.hash, gasUsed: swapResult.gasUsed };
+    } else if (strategy.action_type === 'alert') {
+      // Alert action - no swap needed, just log and return
+      console.log('[Execute] Alert strategy triggered - no swap to execute');
+      result = { 
+        hash: '0xalert_' + Date.now().toString(16), 
+        gasUsed: '0' 
+      };
     } else {
       // Default: swap
       const amount = convertToWei(strategy.action_params.tokenIn, strategy.action_params.amount);

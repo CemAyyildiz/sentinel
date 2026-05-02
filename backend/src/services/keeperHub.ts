@@ -30,6 +30,8 @@ export async function createKeeperTask(strategy: Strategy): Promise<string> {
     retries: 3
   };
 
+  console.log('[KeeperHub] Creating task:', JSON.stringify(taskConfig, null, 2));
+
   try {
     const response = await fetch(`${KEEPERHUB_API}/tasks`, {
       method: 'POST',
@@ -38,16 +40,23 @@ export async function createKeeperTask(strategy: Strategy): Promise<string> {
     });
 
     if (!response.ok) {
-      throw new Error(`KeeperHub error: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`[KeeperHub] API error: ${response.status} - ${errorText}`);
+      throw new Error(`KeeperHub API error: ${response.status} ${errorText}`);
     }
 
-    const data = await response.json();
-    return (data as any).taskId || (data as any).id;
+    const data = await response.json() as any;
+    const taskId = data.taskId || data.id;
+    console.log(`[KeeperHub] Task created successfully: ${taskId}`);
+    return taskId;
   } catch (error) {
-    console.error('KeeperHub create task error:', error);
-
-    // Fallback: store locally
-    const taskId = 'keeper_' + Date.now().toString(36);
+    console.error('[KeeperHub] Failed to create task:', error);
+    
+    // Create a local fallback task but mark it clearly
+    const taskId = 'kh_local_' + Date.now().toString(36);
+    console.log(`[KeeperHub] Using local fallback task ID: ${taskId}`);
+    console.log('[KeeperHub] ⚠️ WARNING: This is NOT a real KeeperHub task. API is unreachable.');
+    
     taskStore.set(taskId, {
       id: taskId,
       name: strategy.name,
@@ -185,6 +194,23 @@ function mapTrigger(strategy: Strategy): any {
 function mapAction(strategy: Strategy): any {
   const params = strategy.action_params;
 
+  // For alert strategies, create a webhook/notification action instead of swap
+  if (strategy.action_type === 'alert') {
+    console.log('[KeeperHub] Creating alert action (webhook)');
+    return {
+      type: 'webhook',
+      url: process.env.ALERT_WEBHOOK_URL || 'https://example.com/webhook',
+      payload: {
+        strategyId: strategy.id,
+        strategyName: strategy.name,
+        trigger: strategy.trigger_type,
+        message: `Alert: ${strategy.name} triggered!`
+      }
+    };
+  }
+
+  // For swap strategies, create a contract call action
+  console.log('[KeeperHub] Creating swap action (contract_call)');
   return {
     type: 'contract_call',
     target: '0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E', // Uniswap SwapRouter02 on Sepolia

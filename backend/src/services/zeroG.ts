@@ -128,13 +128,13 @@ function parseWithRules(prompt: string): ExtendedParsedStrategy {
       triggerToken = `${poolMatch[1]}/${poolMatch[2]}`;
     }
     
-    // Alert action
-    actionType = 'swap';
-    tokenIn = 'USDC';
-    tokenOut = 'ETH';
-    amount = '0';
+    // Alert action - NOT swap!
+    actionType = 'alert';
+    tokenIn = null as any;
+    tokenOut = null as any;
+    amount = null as any;
     name = `Alert: ${triggerToken} APR ${triggerDirection} ${triggerValue}%`;
-    steps.push({ type: 'swap', tokenIn, tokenOut, amount: '0' });
+    steps.push({ type: 'swap', tokenIn: 'USDC', tokenOut: 'ETH', amount: '0' });
   }
   // Check for price trigger with specific amount
   else if (lower.includes('buy') || lower.includes('al')) {
@@ -275,6 +275,18 @@ function parseWithRules(prompt: string): ExtendedParsedStrategy {
   const tokenMatch = prompt.match(/(ETH|BTC|USDC|USDT|DAI|AAVE|WBTC)/i);
   if (tokenMatch && triggerType === 'price') {
     triggerToken = tokenMatch[1].toUpperCase();
+  }
+  
+  // Also check for "alert me" pattern - should be alert action, not swap
+  if ((lower.includes('alert me') || lower.includes('notify me') || lower.includes('tell me when')) && actionType === 'swap') {
+    // Only convert to alert if no buy/sell/swap keywords present
+    if (!lower.includes('buy') && !lower.includes('sell') && !lower.includes('swap')) {
+      actionType = 'alert';
+      tokenIn = null as any;
+      tokenOut = null as any;
+      amount = null as any;
+      name = `Alert: ${triggerToken} ${triggerType} ${triggerDirection} ${triggerValue}`;
+    }
   }
 
   // Generate name if not set

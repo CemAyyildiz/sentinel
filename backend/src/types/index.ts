@@ -4,7 +4,7 @@ export interface Strategy {
   prompt: string;
   trigger_type: 'price' | 'time' | 'apr' | 'ai_signal';
   trigger_params: TriggerParams;
-  action_type: 'swap' | 'add_liquidity' | 'remove_liquidity';
+  action_type: 'swap' | 'add_liquidity' | 'remove_liquidity' | 'alert';
   action_params: ActionParams;
   status: 'active' | 'paused' | 'executed' | 'failed';
   keeper_task_id: string | null;

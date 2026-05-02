@@ -49,6 +49,7 @@ interface ParsedStrategy {
     quote: string;
     gasEstimate: string;
     priceImpact: string;
+    route?: string[];
   };
   confidence: number;
 }
@@ -633,22 +634,58 @@ export default function Home() {
                                     TRIGGER (KeeperHub)
                                   </div>
                                   <div className="font-medium text-sm">
-                                    {msg.strategy.trigger.token} {msg.strategy.trigger.direction} ${msg.strategy.trigger.value.toLocaleString()}
+                                    {msg.strategy.trigger.type === 'apr' ? (
+                                      `${msg.strategy.trigger.token} Pool APR ${msg.strategy.trigger.direction} ${msg.strategy.trigger.value}%`
+                                    ) : (
+                                      `${msg.strategy.trigger.token} ${msg.strategy.trigger.direction} $${msg.strategy.trigger.value.toLocaleString()}`
+                                    )}
                                   </div>
                                 </div>
                                 <div className="bg-black/30 rounded-lg p-3 border border-white/5">
                                   <div className="text-xs text-gray-400 mb-1 flex items-center gap-1">
                                     <ArrowRight className="w-3 h-3" />
-                                    ACTION (Uniswap)
+                                    ACTION ({msg.strategy.action.type === 'alert' ? 'Alert' : 'Uniswap'})
                                   </div>
                                   <div className="font-medium text-sm">
-                                    {msg.strategy.action.amount} {msg.strategy.action.tokenIn} → {msg.strategy.action.tokenOut}
+                                    {msg.strategy.action.type === 'alert' ? (
+                                      'Send notification when triggered'
+                                    ) : (
+                                      `${msg.strategy.action.amount} ${msg.strategy.action.tokenIn} → ${msg.strategy.action.tokenOut}`
+                                    )}
                                   </div>
                                 </div>
                               </div>
                               
-                              {/* Uniswap Route Visualization */}
-                              {msg.strategy.estimatedRoute && (
+                              {/* Alert Configuration (for alert strategies) */}
+                              {msg.strategy.action.type === 'alert' && (
+                                <div className="bg-black/30 rounded-lg p-4 border border-yellow-500/20">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <AlertCircle className="w-4 h-4 text-yellow-400" />
+                                    <span className="text-xs font-medium text-yellow-300">ALERT CONFIGURATION</span>
+                                  </div>
+                                  <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-400">Monitoring:</span>
+                                      <span className="text-white">{msg.strategy.trigger.token} Pool {msg.strategy.trigger.type.toUpperCase()}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-400">Condition:</span>
+                                      <span className="text-white">{msg.strategy.trigger.type.toUpperCase()} {msg.strategy.trigger.direction} {msg.strategy.trigger.value}%</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-400">Notification:</span>
+                                      <span className="text-white">Will alert when triggered</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-400">Check Frequency:</span>
+                                      <span className="text-white">Every 30 seconds via KeeperHub</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {/* Uniswap Route Visualization (for swap strategies) */}
+                              {msg.strategy.estimatedRoute && msg.strategy.action.type !== 'alert' && (
                                 <div className="bg-black/30 rounded-lg p-4 border border-pink-500/20">
                                   <div className="flex items-center gap-2 mb-3">
                                     <div className="w-2 h-2 rounded-full bg-pink-500"></div>
@@ -664,7 +701,7 @@ export default function Home() {
                                     <div className="flex-1 mx-4 relative">
                                       <div className="h-0.5 bg-gradient-to-r from-pink-500 to-purple-500"></div>
                                       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-[#0a0a0f] px-2 py-1 rounded text-xs text-gray-400">
-                                        V3 0.3% Pool
+                                        {msg.strategy.estimatedRoute.route?.join(' → ') || 'V3 Pool'}
                                       </div>
                                       <ArrowRight className="absolute right-0 top-1/2 transform -translate-y-1/2 w-4 h-4 text-pink-400" />
                                     </div>
@@ -682,7 +719,7 @@ export default function Home() {
                                   <div className="grid grid-cols-3 gap-2 text-center border-t border-white/5 pt-3">
                                     <div>
                                       <div className="text-xs text-gray-500">Gas Estimate</div>
-                                      <div className="text-sm font-mono text-yellow-400">{msg.strategy.estimatedRoute.gasEstimate}</div>
+                                      <div className="text-sm font-mono text-yellow-400">${msg.strategy.estimatedRoute.gasEstimate}</div>
                                     </div>
                                     <div>
                                       <div className="text-xs text-gray-500">Price Impact</div>
