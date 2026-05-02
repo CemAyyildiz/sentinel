@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Zap, Shield, TrendingUp, Clock, ChevronRight, Sparkles, Activity, Wallet, History, Settings } from 'lucide-react';
+import { Zap, Shield, TrendingUp, Clock, ChevronRight, Sparkles, Activity, Wallet, History, Settings, CheckCircle, XCircle, AlertCircle, Loader2, Copy, ExternalLink, RefreshCw } from 'lucide-react';
 
 const API_URL = '/api';
 
@@ -53,6 +53,12 @@ interface ParsedStrategy {
   confidence: number;
 }
 
+interface Toast {
+  id: string;
+  type: 'success' | 'error' | 'info';
+  message: string;
+}
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'create' | 'strategies' | 'history'>('create');
   const [prompt, setPrompt] = useState('');
@@ -62,12 +68,55 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(2400);
   const [walletAddress, setWalletAddress] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchStrategies();
     fetchTransactions();
     fetchPrice();
+    checkWalletConnection();
   }, []);
+
+  const showToast = (type: Toast['type'], message: string) => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, type, message }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  };
+
+  const checkWalletConnection = async () => {
+    if (typeof window !== 'undefined' && (window as any).ethereum) {
+      try {
+        const accounts = await (window as any).ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+          setWalletAddress(accounts[0]);
+          setIsConnected(true);
+        }
+      } catch (err) {
+        console.error('Wallet check error:', err);
+      }
+    }
+  };
+
+  const connectWallet = async () => {
+    if (typeof window !== 'undefined' && (window as any).ethereum) {
+      try {
+        const accounts = await (window as any).ethereum.request({ method: 'eth_requestAccounts' });
+        if (accounts.length > 0) {
+          setWalletAddress(accounts[0]);
+          setIsConnected(true);
+          showToast('success', 'Wallet connected successfully!');
+        }
+      } catch (err) {
+        showToast('error', 'Failed to connect wallet');
+      }
+    } else {
+      showToast('error', 'Please install MetaMask');
+    }
+  };
 
   const fetchStrategies = async () => {
     try {
@@ -99,6 +148,13 @@ export default function Home() {
     }
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchStrategies(), fetchTransactions(), fetchPrice()]);
+    setRefreshing(false);
+    showToast('info', 'Data refreshed');
+  };
+
   const handleParse = async () => {
     if (!prompt.trim()) return;
     setLoading(true);
@@ -110,8 +166,9 @@ export default function Home() {
       });
       const data = await res.json();
       setParsedStrategy(data);
+      showToast('success', 'Strategy parsed successfully!');
     } catch (err) {
-      console.error('Parse error:', err);
+      showToast('error', 'Failed to parse strategy');
     }
     setLoading(false);
   };
@@ -120,33 +177,6 @@ export default function Home() {
     if (!parsedStrategy) return;
     setLoading(true);
     try {
-      // First save the strategy
-      const saveRes = await fetch(`${API_URL}/strategies`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: parsedStrategy.id,
-          name: parsedStrategy.name,
-          prompt,
-          trigger_type: parsedStrategy.trigger.type,
-          trigger_params: {
-            token: parsedStrategy.trigger.token,
-            direction: parsedStrategy.trigger.direction,
-            value: parsedStrategy.trigger.value
-          },
-          action_type: parsedStrategy.action.type,
-          action_params: {
-            tokenIn: parsedStrategy.action.tokenIn,
-            tokenOut: parsedStrategy.action.tokenOut,
-            amount: parsedStrategy.action.amount
-          },
-          wallet_address: walletAddress || undefined
-        })
-      });
-
-      if (!saveRes.ok) throw new Error('Failed to save strategy');
-
-      // Then deploy it
       const deployRes = await fetch(`${API_URL}/strategies/deploy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -162,8 +192,9 @@ export default function Home() {
       setPrompt('');
       fetchStrategies();
       setActiveTab('strategies');
+      showToast('success', 'Strategy deployed successfully!');
     } catch (err) {
-      console.error('Deploy error:', err);
+      showToast('error', 'Failed to deploy strategy');
     }
     setLoading(false);
   };
@@ -172,8 +203,9 @@ export default function Home() {
     try {
       await fetch(`${API_URL}/strategies/${id}/pause`, { method: 'PATCH' });
       fetchStrategies();
+      showToast('success', 'Strategy paused');
     } catch (err) {
-      console.error('Pause error:', err);
+      showToast('error', 'Failed to pause strategy');
     }
   };
 
@@ -181,8 +213,9 @@ export default function Home() {
     try {
       await fetch(`${API_URL}/strategies/${id}/resume`, { method: 'PATCH' });
       fetchStrategies();
+      showToast('success', 'Strategy resumed');
     } catch (err) {
-      console.error('Resume error:', err);
+      showToast('error', 'Failed to resume strategy');
     }
   };
 
@@ -190,8 +223,9 @@ export default function Home() {
     try {
       await fetch(`${API_URL}/strategies/${id}`, { method: 'DELETE' });
       fetchStrategies();
+      showToast('success', 'Strategy deleted');
     } catch (err) {
-      console.error('Delete error:', err);
+      showToast('error', 'Failed to delete strategy');
     }
   };
 
@@ -203,12 +237,17 @@ export default function Home() {
         body: JSON.stringify({ walletAddress: walletAddress || undefined })
       });
       const data = await res.json();
-      alert(`Transaction executed! Hash: ${data.txHash}`);
+      showToast('success', `Transaction executed! Hash: ${data.txHash?.slice(0, 10)}...`);
       fetchStrategies();
       fetchTransactions();
     } catch (err) {
-      console.error('Execute error:', err);
+      showToast('error', 'Failed to execute strategy');
     }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    showToast('info', 'Copied to clipboard');
   };
 
   const examplePrompts = [
@@ -217,10 +256,38 @@ export default function Home() {
     "Swap 100 USDC to ETH at best rate"
   ];
 
+  const activeStrategies = strategies.filter(s => s.status === 'active').length;
+  const totalExecuted = transactions.filter(t => t.status === 'success').length;
+
   return (
     <div className="min-h-screen">
+      {/* Toast Notifications */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {toasts.map(toast => (
+          <div
+            key={toast.id}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg animate-slide-in ${
+              toast.type === 'success' ? 'bg-green-500/20 border border-green-500/30' :
+              toast.type === 'error' ? 'bg-red-500/20 border border-red-500/30' :
+              'bg-blue-500/20 border border-blue-500/30'
+            }`}
+          >
+            {toast.type === 'success' && <CheckCircle className="w-5 h-5 text-green-400" />}
+            {toast.type === 'error' && <XCircle className="w-5 h-5 text-red-400" />}
+            {toast.type === 'info' && <AlertCircle className="w-5 h-5 text-blue-400" />}
+            <span className={`text-sm ${
+              toast.type === 'success' ? 'text-green-300' :
+              toast.type === 'error' ? 'text-red-300' :
+              'text-blue-300'
+            }`}>
+              {toast.message}
+            </span>
+          </div>
+        ))}
+      </div>
+
       {/* Header */}
-      <header className="border-b border-dark-700/50 glass sticky top-0 z-50">
+      <header className="border-b border-dark-700/50 glass sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
@@ -232,26 +299,87 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="p-2 rounded-lg bg-dark-800/50 border border-dark-700/50 hover:bg-dark-700/50 transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 text-dark-300 ${refreshing ? 'animate-spin' : ''}`} />
+            </button>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-dark-800/50 border border-dark-700/50">
               <div className="w-2 h-2 rounded-full bg-green-500 live-pulse"></div>
               <span className="text-sm text-dark-300">ETH ${ethPrice.toLocaleString()}</span>
             </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-dark-800/50 border border-dark-700/50">
-              <Wallet className="w-4 h-4 text-primary-400" />
-              <input
-                type="text"
-                placeholder="0x..."
-                value={walletAddress}
-                onChange={(e) => setWalletAddress(e.target.value)}
-                className="bg-transparent text-sm text-dark-200 w-32 outline-none placeholder:text-dark-500"
-              />
-            </div>
+            {isConnected ? (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/30">
+                <Wallet className="w-4 h-4 text-green-400" />
+                <span className="text-sm text-green-300">
+                  {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                </span>
+              </div>
+            ) : (
+              <button
+                onClick={connectWallet}
+                className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+              >
+                <Wallet className="w-4 h-4" />
+                <span className="text-sm font-medium">Connect Wallet</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Stats Dashboard */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="glass rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-dark-400">Total Strategies</p>
+                <p className="text-2xl font-bold">{strategies.length}</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-primary-500/20 flex items-center justify-center">
+                <Activity className="w-5 h-5 text-primary-400" />
+              </div>
+            </div>
+          </div>
+          <div className="glass rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-dark-400">Active</p>
+                <p className="text-2xl font-bold text-green-400">{activeStrategies}</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center">
+                <Zap className="w-5 h-5 text-green-400" />
+              </div>
+            </div>
+          </div>
+          <div className="glass rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-dark-400">Executed</p>
+                <p className="text-2xl font-bold text-blue-400">{totalExecuted}</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-blue-400" />
+              </div>
+            </div>
+          </div>
+          <div className="glass rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-dark-400">ETH Price</p>
+                <p className="text-2xl font-bold">${ethPrice.toLocaleString()}</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-yellow-400" />
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Hero Section */}
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold mb-4">
@@ -267,8 +395,8 @@ export default function Home() {
         <div className="flex gap-2 mb-8">
           {[
             { id: 'create', icon: Sparkles, label: 'Create Strategy' },
-            { id: 'strategies', icon: Activity, label: 'My Strategies' },
-            { id: 'history', icon: History, label: 'History' }
+            { id: 'strategies', icon: Activity, label: `My Strategies (${strategies.length})` },
+            { id: 'history', icon: History, label: `History (${transactions.length})` }
           ].map(tab => (
             <button
               key={tab.id}
@@ -299,7 +427,7 @@ export default function Home() {
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   placeholder="e.g., Buy ETH with 500 USDC when ETH drops below $2,400"
-                  className="w-full h-32 bg-dark-900/50 border border-dark-700/50 rounded-xl p-4 text-dark-100 placeholder:text-dark-500 outline-none focus:border-primary-500/50 resize-none"
+                  className="w-full h-32 bg-dark-900/50 border border-dark-700/50 rounded-xl p-4 text-dark-100 placeholder:text-dark-500 outline-none focus:border-primary-500/50 resize-none transition-colors"
                 />
                 <div className="mt-4 flex flex-wrap gap-2">
                   {examplePrompts.map((example, i) => (
@@ -318,7 +446,7 @@ export default function Home() {
                   className="w-full mt-4 py-3 rounded-xl bg-gradient-to-r from-primary-600 to-accent-600 text-white font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2"
                 >
                   {loading ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     <>
                       <Sparkles className="w-5 h-5" />
@@ -332,7 +460,7 @@ export default function Home() {
             {/* Preview Section */}
             <div className="space-y-6">
               {parsedStrategy ? (
-                <div className="glass rounded-2xl p-6 glow-accent">
+                <div className="glass rounded-2xl p-6 glow-accent animate-fade-in">
                   <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-accent-400" />
                     Parsed Strategy
@@ -393,7 +521,7 @@ export default function Home() {
                       className="w-full py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2"
                     >
                       {loading ? (
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <Loader2 className="w-5 h-5 animate-spin" />
                       ) : (
                         <>
                           <Shield className="w-5 h-5" />
@@ -430,8 +558,8 @@ export default function Home() {
                 <p className="text-sm text-dark-500">Create your first strategy to get started.</p>
               </div>
             ) : (
-              strategies.map(strategy => (
-                <div key={strategy.id} className="glass rounded-2xl p-6">
+              strategies.map((strategy, index) => (
+                <div key={strategy.id} className="glass rounded-2xl p-6 animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="text-lg font-semibold">{strategy.name}</h3>
@@ -518,8 +646,8 @@ export default function Home() {
                 <p className="text-sm text-dark-500">Your transaction history will appear here.</p>
               </div>
             ) : (
-              transactions.map(tx => (
-                <div key={tx.id} className="glass rounded-2xl p-6">
+              transactions.map((tx, index) => (
+                <div key={tx.id} className="glass rounded-2xl p-6 animate-fade-in" style={{ animationDelay: `${index * 100}ms` }}>
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="font-semibold">{tx.strategy_name || 'Unknown Strategy'}</h3>
@@ -536,8 +664,18 @@ export default function Home() {
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div className="p-3 rounded-lg bg-dark-900/50">
                       <div className="text-xs text-dark-500">TX Hash</div>
-                      <div className="font-mono text-sm truncate">
-                        {tx.tx_hash ? `${tx.tx_hash.slice(0, 10)}...${tx.tx_hash.slice(-8)}` : 'N/A'}
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm truncate">
+                          {tx.tx_hash ? `${tx.tx_hash.slice(0, 10)}...${tx.tx_hash.slice(-8)}` : 'N/A'}
+                        </span>
+                        {tx.tx_hash && (
+                          <button
+                            onClick={() => copyToClipboard(tx.tx_hash!)}
+                            className="p-1 hover:bg-dark-700/50 rounded transition-colors"
+                          >
+                            <Copy className="w-3 h-3 text-dark-400" />
+                          </button>
+                        )}
                       </div>
                     </div>
                     <div className="p-3 rounded-lg bg-dark-900/50">
