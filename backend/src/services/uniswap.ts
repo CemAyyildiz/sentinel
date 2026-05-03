@@ -168,7 +168,17 @@ export async function getPools(
   }
 }
 
+// Price cache to avoid rate limiting
+let cachedPrice: { price: number; timestamp: number } | null = null;
+const CACHE_DURATION_MS = 30 * 1000; // 30 seconds
+
 export async function getETHPrice(): Promise<number> {
+  // Return cached price if still valid
+  if (cachedPrice && Date.now() - cachedPrice.timestamp < CACHE_DURATION_MS) {
+    console.log(`[CoinGecko] Using cached ETH price: $${cachedPrice.price}`);
+    return cachedPrice.price;
+  }
+
   // Use CoinGecko as primary price source (free, no API key needed)
   try {
     console.log('[CoinGecko] Fetching real ETH price...');
@@ -182,9 +192,20 @@ export async function getETHPrice(): Promise<number> {
       throw new Error(`Invalid price from CoinGecko: ${price}`);
     }
     console.log(`[CoinGecko] ETH price: $${price}`);
+    
+    // Update cache
+    cachedPrice = { price, timestamp: Date.now() };
+    
     return price;
   } catch (error) {
     console.error('[CoinGecko] Failed to fetch ETH price:', error);
+    
+    // If we have a cached price, use it even if expired
+    if (cachedPrice) {
+      console.log(`[CoinGecko] Using expired cached price: $${cachedPrice.price}`);
+      return cachedPrice.price;
+    }
+    
     throw new Error('Unable to fetch real ETH price. CoinGecko API is unavailable.');
   }
 }

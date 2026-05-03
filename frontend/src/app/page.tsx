@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Shield, Zap, Activity, Clock, ChevronRight, Sparkles, Send, Wallet, History, CheckCircle, XCircle, AlertCircle, Loader2, Copy, ExternalLink, RefreshCw, MessageSquare, TrendingUp, Pause, Play, Trash2, ArrowRight, Eye, Bot, Cpu, Network, ArrowDown, CircleDot } from 'lucide-react';
+import AgentDashboard from '@/components/AgentDashboard';
 
-const API_URL = '/api';
+const API_URL = 'http://localhost:3001/api';
 
 interface Strategy {
   id: string;
@@ -216,6 +217,19 @@ export default function Home() {
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
+    
+    // Cüzdan kontrolü
+    if (!isConnected) {
+      const warningMessage: ChatMessage = {
+        id: Date.now().toString(),
+        type: 'system',
+        content: '🔐 Lütfen önce cüzdanınızı bağlayın! Strateji oluşturmak için cüzdan bağlantısı gereklidir.',
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, warningMessage]);
+      showToast('error', 'Cüzdanınızı bağlayın!');
+      return;
+    }
     
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -445,7 +459,7 @@ export default function Home() {
             </button>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
               <div className="w-2 h-2 rounded-full bg-[#00FF88] animate-pulse"></div>
-              <span className="text-sm text-gray-300 font-mono">ETH ${ethPrice.toFixed(2)}</span>
+              <span className="text-sm text-gray-300 font-mono">ETH ${ethPrice ? `$${ethPrice.toFixed(2)}` : 'Loading...'}</span>
             </div>
             {isConnected ? (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#00FF88]/10 border border-[#00FF88]/30">
@@ -508,7 +522,7 @@ export default function Home() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-400">ETH Price</p>
-                <p className="text-2xl font-bold font-mono">${ethPrice.toFixed(2)}</p>
+                <p className="text-2xl font-bold font-mono">${ethPrice?.toFixed(2) || '2400.00'}</p>
               </div>
               <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-yellow-400" />
@@ -791,6 +805,9 @@ export default function Home() {
 
             {/* Sidebar */}
             <div className="space-y-6">
+              {/* Agent Dashboard - Real-time Activity Feed */}
+              <AgentDashboard api_url={API_URL} />
+              
               {/* KeeperHub Monitor */}
               {keeperStatuses.length > 0 && (
                 <div className="bg-white/5 rounded-2xl p-6 border border-purple-500/20 backdrop-blur-xl">

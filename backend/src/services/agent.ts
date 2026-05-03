@@ -1,6 +1,8 @@
 import { getStrategy, getAllStrategies, updateStrategyStatus, createTransaction, updateTransactionStatus } from './database';
 import { getQuote, executeSwap, getETHPrice } from './uniswap';
+import { executeRealSwap, checkWalletBalance } from './realSwap';
 import { v4 as uuidv4 } from 'uuid';
+import { addActivity } from './agentActivity';
 
 interface AgentState {
   running: boolean;
@@ -72,18 +74,24 @@ async function checkStrategies() {
   // Get current ETH price
   let currentPrice: number;
   try {
+    addActivity('thinking', 'Fetching current ETH price from CoinGecko...');
     currentPrice = await getETHPrice();
-    console.log(`🤖 [Agent] Current ETH price: $${currentPrice}`);
+    addActivity('analysis', `ETH price: $${currentPrice}`, { price: currentPrice });
   } catch (error) {
-    console.error('🤖 [Agent] Failed to get ETH price:', error);
+    addActivity('error', `Failed to fetch ETH price, using fallback: $2400`, { error: String(error) });
     currentPrice = 2400; // Fallback
   }
+
+  addActivity('monitoring', `Evaluating ${strategies.length} active strategies...`, { count: strategies.length });
 
   for (const strategy of strategies) {
     try {
       await evaluateStrategy(strategy, currentPrice);
     } catch (error) {
-      console.error(`🤖 [Agent] Error evaluating strategy ${strategy.id}:`, error);
+      addActivity('error', `Error evaluating strategy: ${strategy.name}`, { 
+        strategyId: strategy.id, 
+        error: String(error) 
+      });
     }
   }
 }
@@ -96,27 +104,50 @@ async function evaluateStrategy(strategy: any, currentPrice: number) {
   const direction = trigger.direction;
   const token = trigger.token;
 
+  addActivity('analysis', `Checking "${strategy.name}": ${token} ${direction} $${targetPrice}`, {
+    strategyId: strategy.id,
+    currentPrice,
+    targetPrice,
+    direction
+  });
+
   let shouldExecute = false;
+  let reason = '';
 
   if (token === 'ETH') {
     if (direction === 'below' && currentPrice < targetPrice) {
       shouldExecute = true;
-      console.log(`🤖 [Agent] TRIGGER: ETH ($${currentPrice}) < $${targetPrice}`);
+      reason = `ETH ($${currentPrice}) dropped below target ($${targetPrice})`;
     } else if (direction === 'above' && currentPrice > targetPrice) {
       shouldExecute = true;
-      console.log(`🤖 [Agent] TRIGGER: ETH ($${currentPrice}) > $${targetPrice}`);
+      reason = `ETH ($${currentPrice}) rose above target ($${targetPrice})`;
+    } else {
+      reason = `Condition not met: ETH at $${currentPrice}, waiting for ${direction} $${targetPrice}`;
     }
   }
 
   if (shouldExecute) {
-    console.log(`🤖 [Agent] Executing strategy: ${strategy.name}`);
+    addActivity('decision', `🎯 TRIGGER ACTIVATED! ${reason}`, {
+      strategyId: strategy.id,
+      strategyName: strategy.name,
+      currentPrice,
+      targetPrice
+    });
     await executeStrategy(strategy);
+  } else {
+    addActivity('monitoring', reason, { strategyId: strategy.id });
   }
 }
 
 async function executeStrategy(strategy: any) {
   const txId = uuidv4();
   const walletAddress = strategy.wallet_address || '0x0000000000000000000000000000000000000000';
+
+  addActivity('action', `⚡ Executing "${strategy.name}"...`, {
+    strategyId: strategy.id,
+    actionType: strategy.action_type,
+    actionParams: strategy.action_params
+  });
 
   try {
     // Create transaction record
@@ -131,13 +162,22 @@ async function executeStrategy(strategy: any) {
     let result: { hash: string; gasUsed: string };
 
     if (strategy.action_type === 'swap') {
-      // Simple swap
       const amount = convertToWei(strategy.action_params.tokenIn, strategy.action_params.amount);
+      
+      addActivity('analysis', `Getting quote: ${strategy.action_params.amount} ${strategy.action_params.tokenIn} → ${strategy.action_params.tokenOut}`, {
+        amount,
+        tokenIn: strategy.action_params.tokenIn,
+        tokenOut: strategy.action_params.tokenOut
+      });
+
       const quote = await getQuote(
         strategy.action_params.tokenIn,
         strategy.action_params.tokenOut,
         amount
       );
+
+      addActivity('decision', `Quote received. Executing swap...`, { quote });
+
       const swapResult = await executeSwap(
         quote,
         walletAddress,
@@ -157,10 +197,19 @@ async function executeStrategy(strategy: any) {
     updateStrategyStatus(strategy.id, 'executed');
 
     state.strategiesExecuted++;
-    console.log(`🤖 [Agent] ✅ Strategy executed! TX: ${result.hash}`);
+    
+    addActivity('success', `✅ Strategy executed successfully! TX: ${result.hash.slice(0, 10)}...`, {
+      strategyId: strategy.id,
+      strategyName: strategy.name,
+      txHash: result.hash,
+      gasUsed: result.gasUsed
+    });
 
   } catch (error) {
-    console.error(`🤖 [Agent] ❌ Strategy execution failed:`, error);
+    addActivity('error', `❌ Strategy execution failed: ${strategy.name}`, {
+      strategyId: strategy.id,
+      error: String(error)
+    });
     updateTransactionStatus(txId, 'failed');
     updateStrategyStatus(strategy.id, 'failed');
   }
