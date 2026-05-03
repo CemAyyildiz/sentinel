@@ -1,7 +1,7 @@
 {
   "name": "sentinelswap-backend",
   "version": "1.0.0",
-  "description": "SentinelSwap - Autonomous DeFi Strategy Agent Backend",
+  "description": "Sentinel - Autonomous DeFi Strategy Agent Backend",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

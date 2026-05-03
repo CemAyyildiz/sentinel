@@ -1,8 +1,9 @@
 import { getStrategy, getAllStrategies, updateStrategyStatus, createTransaction, updateTransactionStatus } from './database';
-import { getQuote, executeSwap, getETHPrice } from './uniswap';
-import { executeRealSwap, checkWalletBalance } from './realSwap';
+import { getETHPrice } from './uniswap';
+import { executeRealSwap, checkWalletBalance, getRealQuote } from './realSwap';
 import { v4 as uuidv4 } from 'uuid';
 import { addActivity } from './agentActivity';
+import { ethers, Wallet } from 'ethers';
 
 interface AgentState {
   running: boolean;
@@ -10,6 +11,22 @@ interface AgentState {
   lastCheck: Date | null;
   checksPerformed: number;
   strategiesExecuted: number;
+  walletAddress: string | null;
+}
+
+// Agent'ın kendi cüzdanı (her restart'ta yeni oluşturulur)
+let agentWallet: any = null;
+
+function getOrCreateAgentWallet(): any {
+  if (agentWallet) return agentWallet;
+  
+  // Yeni random wallet oluştur
+  agentWallet = ethers.Wallet.createRandom();
+  console.log(`🤖 Agent wallet created: ${agentWallet.address}`);
+  console.log(`🤖 Agent wallet address: ${agentWallet.address}`);
+  console.log(`🤖 Send Sepolia ETH to this address for agent to execute swaps`);
+  
+  return agentWallet;
 }
 
 const state: AgentState = {
@@ -17,16 +34,29 @@ const state: AgentState = {
   intervalId: null,
   lastCheck: null,
   checksPerformed: 0,
-  strategiesExecuted: 0
+  strategiesExecuted: 0,
+  walletAddress: null
 };
 
 const CHECK_INTERVAL = 30000; // 30 seconds
 
 export function getAgentState() {
+  const wallet = getOrCreateAgentWallet();
   return {
     ...state,
+    walletAddress: wallet.address,
     activeStrategies: getAllStrategies().filter(s => s.status === 'active').length
   };
+}
+
+export function getAgentWalletAddress(): string {
+  const wallet = getOrCreateAgentWallet();
+  return wallet.address;
+}
+
+export function getAgentPrivateKey(): string | null {
+  const wallet = getOrCreateAgentWallet();
+  return wallet.privateKey || null;
 }
 
 export function startAgent() {
@@ -35,7 +65,7 @@ export function startAgent() {
     return;
   }
 
-  console.log('🤖 Starting SentinelSwap Agent...');
+  console.log('🤖 Starting Sentinel Agent...');
   state.running = true;
   state.lastCheck = new Date();
 
@@ -170,22 +200,31 @@ async function executeStrategy(strategy: any) {
         tokenOut: strategy.action_params.tokenOut
       });
 
-      const quote = await getQuote(
+      // Get real quote from Uniswap V3 QuoterV2
+      const quote = await getRealQuote(
         strategy.action_params.tokenIn,
         strategy.action_params.tokenOut,
         amount
       );
 
-      addActivity('decision', `Quote received. Executing swap...`, { quote });
+      addActivity('decision', `Quote received: ${quote.quote}. Executing real swap...`, { quote });
 
-      const swapResult = await executeSwap(
-        quote,
-        walletAddress,
-        strategy.action_params.tokenIn,
-        strategy.action_params.tokenOut,
-        amount
-      );
-      result = { hash: swapResult.hash, gasUsed: '150000' };
+      // Execute real swap via Uniswap V3 SwapRouter using agent's wallet
+      const agentW = getOrCreateAgentWallet();
+      const swapResult = await executeRealSwap({
+        tokenIn: strategy.action_params.tokenIn,
+        tokenOut: strategy.action_params.tokenOut,
+        amount: amount,
+        walletAddress: agentW.address,
+        privateKey: agentW.privateKey,
+        slippage: 0.5
+      });
+
+      if (!swapResult.success) {
+        throw new Error(swapResult.error || 'Swap failed');
+      }
+
+      result = { hash: swapResult.txHash!, gasUsed: swapResult.gasUsed || '150000' };
     } else {
       throw new Error(`Unknown action type: ${strategy.action_type}`);
     }

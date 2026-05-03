@@ -119,5 +119,57 @@ export const TOKENS: Record<string, TokenInfo> = {
 export const UNISWAP_CONTRACTS = {
   SWAP_ROUTER_02: '0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E',
   QUOTER_V2: '0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3',
-  FACTORY: '0x0227628f3F023bb0B980b67D528571c95c6DaC1c'
+  FACTORY: '0x0227628f3F023bb0B980b67D528571c95c6DaC1c',
+  // Sepolia testnet chain ID
+  CHAIN_ID: 11155111
 };
+
+// Uniswap V3 SwapRouter ABI (minimal for exactInputSingle)
+export const SWAP_ROUTER_ABI = [
+  'function exactInputSingle(tuple(address tokenIn, address tokenOut, uint24 fee, address recipient, uint256 deadline, uint256 amountIn, uint256 amountOutMinimum, uint160 sqrtPriceLimitX96)) external payable returns (uint256 amountOut)',
+  'function multicall(bytes[] calldata data) external payable returns (bytes[] memory results)',
+  'function refundETH() external payable'
+];
+
+// Uniswap V3 QuoterV2 ABI (minimal for quoteExactInputSingle)
+export const QUOTER_V2_ABI = [
+  'function quoteExactInputSingle(tuple(address tokenIn, address tokenOut, uint256 amountIn, uint24 fee, uint160 sqrtPriceLimitX96)) external returns (uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate)'
+];
+
+// ERC20 ABI for token approvals
+export const ERC20_ABI = [
+  'function approve(address spender, uint256 amount) external returns (bool)',
+  'function allowance(address owner, address spender) external view returns (uint256)',
+  'function balanceOf(address account) external view returns (uint256)',
+  'function decimals() external view returns (uint8)'
+];
+
+// WETH ABI for wrapping/unwrapping
+export const WETH_ABI = [
+  'function deposit() external payable',
+  'function withdraw(uint256 wad) external',
+  'function balanceOf(address account) external view returns (uint256)'
+];
+
+export interface SwapParams {
+  tokenIn: string;
+  tokenOut: string;
+  amount: string;
+  walletAddress: string;
+  privateKey?: string; // Agent wallet private key
+  slippage?: number; // percentage, default 0.5%
+}
+
+export interface SwapResult {
+  success: boolean;
+  txHash?: string;
+  gasUsed?: string;
+  error?: string;
+}
+
+export interface WalletBalance {
+  eth: string;
+  weth: string;
+  usdc: string;
+  hasEnoughForGas: boolean;
+}

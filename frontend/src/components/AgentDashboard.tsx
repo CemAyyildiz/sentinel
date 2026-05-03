@@ -22,8 +22,10 @@ export default function AgentDashboard({ api_url }: AgentDashboardProps) {
   const [stats, setStats] = useState({
     checksPerformed: 0,
     strategiesExecuted: 0,
-    activeStrategies: 0
+    activeStrategies: 0,
+    walletAddress: ''
   });
+  const [walletBalance, setWalletBalance] = useState<{eth: string, usdc: string} | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -75,13 +77,30 @@ export default function AgentDashboard({ api_url }: AgentDashboardProps) {
 
   const fetchAgentState = async () => {
     try {
-      const res = await fetch(`${api_url}/agent/state`);
+      const res = await fetch(`${api_url}/agent/status`);
       const data = await res.json();
       setStats({
-        checksPerformed: data.checksPerformed || 0,
-        strategiesExecuted: data.strategiesExecuted || 0,
-        activeStrategies: data.activeStrategies || 0
+        checksPerformed: data.agent?.checksPerformed || 0,
+        strategiesExecuted: data.agent?.strategiesExecuted || 0,
+        activeStrategies: data.agent?.activeStrategies || 0,
+        walletAddress: data.agent?.walletAddress || ''
       });
+      
+      // Fetch wallet balance if address exists
+      if (data.agent?.walletAddress) {
+        try {
+          const balanceRes = await fetch(`${api_url}/agent/balance/${data.agent.walletAddress}`);
+          const balanceData = await balanceRes.json();
+          if (balanceData.success) {
+            setWalletBalance({
+              eth: balanceData.balance.eth,
+              usdc: balanceData.balance.usdc
+            });
+          }
+        } catch (err) {
+          console.error('Failed to fetch wallet balance:', err);
+        }
+      }
     } catch (err) {
       console.error('Failed to fetch agent state:', err);
     }
@@ -162,6 +181,50 @@ export default function AgentDashboard({ api_url }: AgentDashboardProps) {
           </div>
         </div>
         
+        {/* Agent Wallet */}
+        {stats.walletAddress && (
+          <div className="mt-3 bg-gradient-to-r from-purple-500/10 to-blue-500/10 rounded-lg p-3 border border-purple-500/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-gray-400 mb-1">🤖 Agent Wallet</p>
+                <p className="text-sm font-mono text-purple-300">
+                  {stats.walletAddress.slice(0, 6)}...{stats.walletAddress.slice(-4)}
+                </p>
+              </div>
+              <a
+                href={`https://sepolia.etherscan.io/address/${stats.walletAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-400 hover:text-blue-300 underline"
+              >
+                View on Etherscan →
+              </a>
+            </div>
+            {walletBalance && (
+              <div className="flex gap-4 mt-2">
+                <div className="text-xs">
+                  <span className="text-gray-400">ETH:</span>
+                  <span className={`ml-1 font-mono ${parseFloat(walletBalance.eth) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {walletBalance.eth}
+                  </span>
+                </div>
+                <div className="text-xs">
+                  <span className="text-gray-400">USDC:</span>
+                  <span className={`ml-1 font-mono ${parseFloat(walletBalance.usdc) > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {walletBalance.usdc}
+                  </span>
+                </div>
+              </div>
+            )}
+            <p className="text-xs text-gray-500 mt-2">
+              💰 Fund with Sepolia ETH from{' '}
+              <a href="https://sepoliafaucet.com/" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
+                sepoliafaucet.com
+              </a>
+            </p>
+          </div>
+        )}
+
         {/* Stats */}
         <div className="grid grid-cols-3 gap-2 mt-3">
           <div className="bg-black/30 rounded-lg p-2 text-center">

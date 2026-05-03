@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Shield, Zap, Activity, Clock, ChevronRight, Sparkles, Send, Wallet, History, CheckCircle, XCircle, AlertCircle, Loader2, Copy, ExternalLink, RefreshCw, MessageSquare, TrendingUp, Pause, Play, Trash2, ArrowRight, Eye, Bot, Cpu, Network, ArrowDown, CircleDot } from 'lucide-react';
 import AgentDashboard from '@/components/AgentDashboard';
+import SwarmPanel from '@/components/SwarmPanel';
+import INFTPanel from '@/components/iNFTPanel';
+import ZeroGStoragePanel from '@/components/ZeroGStoragePanel';
 
 const API_URL = 'http://localhost:3001/api';
 
@@ -85,12 +88,12 @@ interface KeeperStatus {
 }
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'create' | 'strategies' | 'history'>('create');
+  const [activeTab, setActiveTab] = useState<'create' | 'strategies' | 'history' | 'advanced'>('create');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       type: 'system',
-      content: 'Welcome to SentinelSwap! Describe your DeFi strategy in plain English. I\'ll use 0G AI to parse your intent, validate routes via Uniswap, and deploy an autonomous agent via KeeperHub.',
+        content: 'Welcome to Sentinel! Describe your DeFi strategy in plain English. I\'ll use 0G AI to parse your intent, validate routes via Uniswap, and deploy an autonomous agent via KeeperHub.',
       timestamp: new Date()
     }
   ]);
@@ -218,16 +221,16 @@ export default function Home() {
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
     
-    // Cüzdan kontrolü
+    // Wallet connection check
     if (!isConnected) {
       const warningMessage: ChatMessage = {
         id: Date.now().toString(),
         type: 'system',
-        content: '🔐 Lütfen önce cüzdanınızı bağlayın! Strateji oluşturmak için cüzdan bağlantısı gereklidir.',
+        content: '🔐 Connect your wallet to create strategies',
         timestamp: new Date()
       };
       setChatMessages(prev => [...prev, warningMessage]);
-      showToast('error', 'Cüzdanınızı bağlayın!');
+      showToast('error', 'Connect your wallet!');
       return;
     }
     
@@ -428,7 +431,7 @@ export default function Home() {
               <Shield className="w-6 h-6 text-black" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">SentinelSwap</h1>
+              <h1 className="text-xl font-bold">Sentinel</h1>
               <p className="text-xs text-gray-400">Autonomous DeFi Agent</p>
             </div>
           </div>
@@ -536,7 +539,8 @@ export default function Home() {
           {[
             { id: 'create', icon: MessageSquare, label: 'Strategy Creator' },
             { id: 'strategies', icon: Activity, label: `Active Strategies (${strategies.length})` },
-            { id: 'history', icon: History, label: `History (${transactions.length})` }
+            { id: 'history', icon: History, label: `History (${transactions.length})` },
+            { id: 'advanced', icon: Bot, label: 'Advanced' }
           ].map(tab => (
             <button
               key={tab.id}
@@ -769,7 +773,7 @@ export default function Home() {
                             </div>
                           )}
                           
-                          <div className="text-xs text-gray-500 mt-2">
+                          <div className="text-xs text-gray-500 mt-2" suppressHydrationWarning>
                             {`${msg.timestamp.getHours().toString().padStart(2, '0')}:${msg.timestamp.getMinutes().toString().padStart(2, '0')}:${msg.timestamp.getSeconds().toString().padStart(2, '0')}`}
                           </div>
                         </>
@@ -1142,6 +1146,55 @@ export default function Home() {
             )}
           </div>
         )}
+
+        {/* Advanced Tab */}
+        {activeTab === 'advanced' && (
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Multi-Agent Swarm */}
+            <SwarmPanel api_url={API_URL} />
+            
+            {/* iNFT Tokenization */}
+            <INFTPanel api_url={API_URL} />
+            
+            {/* 0G Storage */}
+            <ZeroGStoragePanel api_url={API_URL} />
+            
+            {/* ENS Identity */}
+            <div className="bg-white/5 rounded-2xl border border-white/10 backdrop-blur-xl overflow-hidden">
+              <div className="p-4 border-b border-white/10">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Network className="w-5 h-5 text-indigo-400" />
+                  ENS Agent Identity
+                </h3>
+                <p className="text-xs text-gray-400 mt-1">Human-readable agent names via ENS</p>
+              </div>
+              <div className="p-4 space-y-3">
+                {[
+                  { role: 'Architect', ens: 'architect.sentinelswap.eth', color: 'blue' },
+                  { role: 'Executor', ens: 'executor.sentinelswap.eth', color: 'orange' },
+                  { role: 'Monitor', ens: 'monitor.sentinelswap.eth', color: 'purple' }
+                ].map((agent, i) => (
+                  <div key={i} className="bg-black/30 rounded-lg p-3 border border-white/5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">{agent.role} Agent</p>
+                        <p className="text-xs font-mono text-indigo-300">{agent.ens}</p>
+                      </div>
+                      <div className={`w-3 h-3 rounded-full bg-${agent.color}-500`}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="p-4 border-t border-white/10 bg-black/20">
+                <div className="text-xs text-gray-500 space-y-1">
+                  <p>• ENS names enable agent discovery</p>
+                  <p>• Resolve by role: architect, executor, monitor</p>
+                  <p>• Decentralized identity on Ethereum</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Footer */}
@@ -1149,7 +1202,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 py-6 flex items-center justify-between text-sm text-gray-500">
           <div className="flex items-center gap-2">
             <Shield className="w-4 h-4" />
-            <span>SentinelSwap</span>
+            <span>Sentinel</span>
           </div>
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-2">

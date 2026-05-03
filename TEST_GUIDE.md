@@ -1,12 +1,12 @@
-# SentinelSwap Otonom Agent Test Kılavuzu 🧪
+# Sentinel Autonomous Agent Test Guide 🧪
 
-## ✅ Evet, Proje Tamamen Otonom Olarak Çalışıyor!
+## ✅ Yes, The Project Runs Fully Autonomous!
 
-SentinelSwap, backend başladığında otomatik olarak çalışan bir DeFi ajanıdır. İşte nasıl test edeceğiniz:
+Sentinel is a DeFi agent that automatically starts when the backend boots up. Here's how to test it:
 
 ---
 
-## 🚀 Adım 1: Projeyi Başlatın
+## 🚀 Step 1: Start the Project
 
 ### Terminal 1 - Backend
 ```bash
@@ -15,11 +15,11 @@ npm install
 npm run dev
 ```
 
-**Beklenen çıktı:**
+**Expected output:**
 ```
-🚀 SentinelSwap Backend running on port 3001
+🚀 Sentinel Backend running on port 3001
 📊 API: http://localhost:3001/api
-🤖 Starting SentinelSwap Agent...
+🤖 Starting Sentinel Agent...
 🤖 Agent started! Checking every 30 seconds
 ```
 
@@ -30,7 +30,7 @@ npm install
 npm run dev
 ```
 
-**Beklenen çıktı:**
+**Expected output:**
 ```
 ▲ Next.js 14.x
 - Local: http://localhost:3000
@@ -38,14 +38,14 @@ npm run dev
 
 ---
 
-## 🧪 Adım 2: Agent Durumunu Kontrol Edin
+## 🧪 Step 2: Check Agent Status
 
-### API ile Kontrol
+### Check via API
 ```bash
 curl http://localhost:3001/api/agent/state
 ```
 
-**Beklenen yanıt:**
+**Expected response:**
 ```json
 {
   "running": true,
@@ -56,9 +56,9 @@ curl http://localhost:3001/api/agent/state
 }
 ```
 
-### WebSocket ile Gerçek Zamanlı İzleme
+### Real-time Monitoring via WebSocket
 ```javascript
-// Browser console'da çalıştırın
+// Run in browser console
 const ws = new WebSocket('ws://localhost:3001');
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
@@ -68,26 +68,26 @@ ws.onmessage = (event) => {
 
 ---
 
-## 📝 Adım 3: Strateji Oluşturun
+## 📝 Step 3: Create a Strategy
 
-### Frontend Üzerinden
-1. http://localhost:3000 adresine gidin
-2. Şu stratejiyi yazın:
+### Via Frontend
+1. Go to http://localhost:3000
+2. Type the following strategy:
    ```
    Buy ETH with 500 USDC when ETH drops below $2,400
    ```
-3. "Parse Strategy" butonuna tıklayın
-4. Strateji detaylarını inceleyin
-5. "Deploy Strategy" butonuna tıklayın
+3. Click "Parse Strategy" button
+4. Review the strategy details
+5. Click "Deploy Strategy" button
 
-### API ile
+### Via API
 ```bash
-# Stratejiyi parse et
+# Parse the strategy
 curl -X POST http://localhost:3001/api/strategies/parse \
   -H "Content-Type: application/json" \
   -d '{"text": "Buy ETH with 500 USDC when ETH drops below $2400"}'
 
-# Stratejiyi deploy et (parse sonucundaki ID'yi kullanın)
+# Deploy the strategy (use ID from parse result)
 curl -X POST http://localhost:3001/api/strategies/deploy \
   -H "Content-Type: application/json" \
   -d '{
@@ -100,15 +100,15 @@ curl -X POST http://localhost:3001/api/strategies/deploy \
 
 ---
 
-## 👁️ Adım 4: Agent'ın Çalıştığını İzleyin
+## 👁️ Step 4: Monitor Agent Activity
 
-### Activity Log Kontrolü
+### Check Activity Log
 ```bash
-# Son 20 aktiviteyi getir
+# Get last 20 activities
 curl http://localhost:3001/api/agent/activities?limit=20
 ```
 
-**Beklenen aktiviteler:**
+**Expected activities:**
 ```json
 [
   {
@@ -139,51 +139,51 @@ curl http://localhost:3001/api/agent/activities?limit=20
 ```
 
 ### Frontend Dashboard
-- Agent Dashboard panelinde gerçek zamanlı aktiviteleri görün
-- Her 30 saniyede yeni loglar gelecek
+- View real-time activities in the Agent Dashboard panel
+- New logs will appear every 30 seconds
 
 ---
 
-## ⚡ Adım 5: Strateji Tetiklenmesini Test Edin
+## ⚡ Step 5: Test Strategy Triggering
 
-### Senaryo 1: Fiyat Düşüşünü Simüle Edin
-Agent'ın test modunda çalışması için `getETHPrice` fonksiyonunu geçici olarak değiştirebilirsiniz:
+### Scenario 1: Simulate Price Drop
+You can temporarily modify the `getETHPrice` function to run in test mode:
 
 ```typescript
-// sentinelswap/backend/src/services/uniswap.ts dosyasında
+// In sentinelswap/backend/src/services/uniswap.ts
 export async function getETHPrice(): Promise<number> {
-  // Test için düşük fiyat döndür
-  return 2350; // $2,400'ın altında
+  // Return low price for testing
+  return 2350; // Below $2,400
 }
 ```
 
-**Beklenen sonuç:**
+**Expected result:**
 ```
 🎯 TRIGGER ACTIVATED! ETH ($2,350) dropped below target ($2,400)
 ⚡ Executing "ETH Dip Buy"...
 ✅ Strategy executed successfully! TX: 0x1234...
 ```
 
-### Senaryo 2: Manuel Tetikleme
+### Scenario 2: Manual Trigger
 ```bash
 curl -X POST http://localhost:3001/api/strategies/{strategyId}/execute
 ```
 
 ---
 
-## 📊 Adım 6: Sonuçları Doğrulayın
+## 📊 Step 6: Verify Results
 
-### İşlem Geçmişi
+### Transaction History
 ```bash
 curl http://localhost:3001/api/history
 ```
 
-### Strateji Durumu
+### Strategy Status
 ```bash
 curl http://localhost:3001/api/strategies
 ```
 
-**Beklenen durum:**
+**Expected status:**
 ```json
 {
   "id": "...",
@@ -195,10 +195,10 @@ curl http://localhost:3001/api/strategies
 
 ---
 
-## 🔍 Adım 7: Gerçek Zamanlı İzleme
+## 🔍 Step 7: Real-time Monitoring
 
-### Agent Loglarını İzleyin
-Backend terminalinde şu logları görmelisiniz:
+### Monitor Agent Logs
+You should see the following logs in the backend terminal:
 
 ```
 🤖 [Agent] Checking 1 active strategies...
@@ -206,7 +206,7 @@ Backend terminalinde şu logları görmelisiniz:
 🤖 [Agent] Checking "ETH Dip Buy": ETH below $2,400
 🤖 [Agent] Condition not met: ETH at $2,450, waiting for below $2,400
 
-# 30 saniye sonra...
+# 30 seconds later...
 🤖 [Agent] Checking 1 active strategies...
 🤖 [Agent] ETH price: $2,380
 🤖 [Agent] 🎯 TRIGGER ACTIVATED! ETH ($2,380) dropped below target ($2,400)
@@ -218,71 +218,71 @@ Backend terminalinde şu logları görmelisiniz:
 
 ## 🛠️ Troubleshooting
 
-### Agent Çalışmıyor mu?
+### Agent Not Running?
 ```bash
-# Agent durumunu kontrol et
+# Check agent status
 curl http://localhost:3001/api/agent/state
 
-# Agent'ı manuel başlat
+# Start agent manually
 curl -X POST http://localhost:3001/api/agent/start
 
-# Agent'ı durdur
+# Stop agent
 curl -X POST http://localhost:3001/api/agent/stop
 ```
 
-### Fiyat Verisi Gelmiyor mu?
-- CoinGecko API rate limit'e takılmış olabilir
-- Fallback fiyat: $2,400
+### Price Data Not Loading?
+- CoinGecko API may have hit rate limit
+- Fallback price: $2,400
 
-### WebSocket Bağlantısı Kopuyor mu?
-- Backend'in çalıştığından emin olun
-- Firewall ayarlarını kontrol edin
+### WebSocket Connection Dropping?
+- Make sure backend is running
+- Check firewall settings
 
 ---
 
-## 📈 Performans Metrikleri
+## 📈 Performance Metrics
 
-Agent'ın performansını izleyin:
+Monitor agent performance:
 
 ```bash
 curl http://localhost:3001/api/agent/state | jq
 ```
 
-**Önemli metrikler:**
-- `running`: Agent çalışıyor mu?
-- `checksPerformed`: Toplam kontrol sayısı
-- `strategiesExecuted`: Çalıştırılan strateji sayısı
-- `activeStrategies`: Aktif strateji sayısı
-- `lastCheck`: Son kontrol zamanı
+**Key metrics:**
+- `running`: Is the agent running?
+- `checksPerformed`: Total number of checks
+- `strategiesExecuted`: Number of strategies executed
+- `activeStrategies`: Number of active strategies
+- `lastCheck`: Last check time
 
 ---
 
 ## ✅ Test Checklist
 
-- [ ] Backend başarıyla başladı
-- [ ] Frontend başarıyla başladı
-- [ ] Agent otomatik olarak çalıştı
-- [ ] Strateji başarıyla parse edildi
-- [ ] Strateji başarıyla deploy edildi
-- [ ] Agent her 30 saniyede kontrol yaptı
-- [ ] Fiyat verisi başarıyla çekildi
-- [ ] Strateji koşulu değerlendirildi
-- [ ] Tetiklenme gerçekleşti (simülasyon)
-- [ ] Swap işlemi gerçekleştirildi
-- [ ] İşlem geçmişine kaydedildi
-- [ ] WebSocket ile gerçek zamanlı güncelleme alındı
+- [ ] Backend started successfully
+- [ ] Frontend started successfully
+- [ ] Agent started automatically
+- [ ] Strategy parsed successfully
+- [ ] Strategy deployed successfully
+- [ ] Agent checks every 30 seconds
+- [ ] Price data fetched successfully
+- [ ] Strategy condition evaluated
+- [ ] Trigger activated (simulation)
+- [ ] Swap transaction executed
+- [ ] Transaction recorded in history
+- [ ] Real-time updates received via WebSocket
 
 ---
 
-## 🎯 Sonuç
+## 🎯 Conclusion
 
-Evet, SentinelSwap **tamamen otonom** olarak çalışıyor! 
+Yes, Sentinel runs **fully autonomous**!
 
-Agent, backend başladığında otomatik olarak başlar ve:
-1. Her 30 saniyede aktif stratejileri kontrol eder
-2. ETH fiyatını canlı olarak çeker
-3. Strateji koşullarını değerlendirir
-4. Koşullar sağlandığında otomatik olarak swap yapar
-5. Tüm aktiviteleri loglar ve WebSocket ile yayınlar
+The agent automatically starts when the backend boots and:
+1. Checks active strategies every 30 seconds
+2. Fetches live ETH price
+3. Evaluates strategy conditions
+4. Automatically executes swaps when conditions are met
+5. Logs all activities and broadcasts via WebSocket
 
-**İnsan müdahalesi gerekmez!** 🤖
+**No human intervention required!** 🤖

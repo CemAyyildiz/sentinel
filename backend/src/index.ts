@@ -7,6 +7,7 @@ import strategyRoutes from './routes/strategies';
 import historyRoutes from './routes/history';
 import marketRoutes from './routes/market';
 import agentRoutes from './routes/agent';
+import swarmRoutes from './routes/swarm';
 import { startAgent } from './services/agent';
 import { getActivities, subscribeToActivities } from './services/agentActivity';
 
@@ -24,6 +25,7 @@ app.use('/api/strategies', strategyRoutes);
 app.use('/api/history', historyRoutes);
 app.use('/api', marketRoutes);
 app.use('/api/agent', agentRoutes);
+app.use('/api/swarm', swarmRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -90,7 +92,7 @@ subscribeToActivities((activity) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`🚀 SentinelSwap Backend running on port ${PORT}`);
+  console.log(`🚀 Sentinel Backend running on port ${PORT}`);
   console.log(`📊 API: http://localhost:${PORT}/api`);
   console.log(`❤️  Health: http://localhost:${PORT}/api/health`);
   console.log(`🔌 WebSocket: ws://localhost:${PORT}`);
