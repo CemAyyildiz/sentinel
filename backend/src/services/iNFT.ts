@@ -187,4 +187,3 @@ class INFTAgentService {
 export const iNFTService = new INFTAgentService(
   process.env.RPC_URL || 'https://sepolia.infura.io/v3/YOUR_INFURA_KEY'
 );
-export type { AgentNFT, iNFTMetadata };

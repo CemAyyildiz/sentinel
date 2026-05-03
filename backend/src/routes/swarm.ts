@@ -214,7 +214,7 @@ router.get('/inft/agents', async (req: Request, res: Response) => {
 // Discover agents by role
 router.get('/ens/discover/:role', async (req: Request, res: Response) => {
   try {
-    const { role } = req.params;
+    const role = req.params.role as string;
     const agents = await ensService.discoverAgentsByRole(role);
 
     res.json({
@@ -231,7 +231,7 @@ router.get('/ens/discover/:role', async (req: Request, res: Response) => {
 // Resolve ENS domain
 router.get('/ens/resolve/:domain', async (req: Request, res: Response) => {
   try {
-    const { domain } = req.params;
+    const domain = req.params.domain as string;
     const address = await ensService.resolveAgentDomain(domain);
 
     if (!address) {
@@ -275,7 +275,7 @@ router.get('/ens/agents', async (req: Request, res: Response) => {
 // Get agent memory from 0G Storage
 router.get('/storage/agent-memory/:agentId', async (req: Request, res: Response) => {
   try {
-    const { agentId } = req.params;
+    const agentId = req.params.agentId as string;
     const memory = await zeroGStorage.getAgentMemory(agentId);
 
     if (!memory) {

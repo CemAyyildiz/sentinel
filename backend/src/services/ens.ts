@@ -215,4 +215,3 @@ class ENSService {
 export const ensService = new ENSService(
   process.env.RPC_URL || 'https://sepolia.infura.io/v3/YOUR_INFURA_KEY'
 );
-export type { AgentENSProfile };

@@ -168,4 +168,3 @@ class MultiAgentSwarm {
 }
 
 export const multiAgentSwarm = new MultiAgentSwarm();
-export type { StrategyPlan, ExecutionPlan };
