@@ -8,7 +8,7 @@ import INFTPanel from '@/components/iNFTPanel';
 import ZeroGStoragePanel from '@/components/ZeroGStoragePanel';
 
 const API_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
-  ? '/_/backend/api'
+  ? '/api'
   : 'http://localhost:3001/api';
 
 interface Strategy {
@@ -197,9 +197,10 @@ export default function Home() {
     try {
       const res = await fetch(`${API_URL}/strategies`);
       const data = await res.json();
-      setStrategies(data);
+      setStrategies(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to fetch strategies:', err);
+      setStrategies([]);
     }
   };
 
@@ -207,9 +208,10 @@ export default function Home() {
     try {
       const res = await fetch(`${API_URL}/history`);
       const data = await res.json();
-      setTransactions(data);
+      setTransactions(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to fetch transactions:', err);
+      setTransactions([]);
     }
   };
 

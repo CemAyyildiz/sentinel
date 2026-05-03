@@ -30,41 +30,75 @@ export default function AgentDashboard({ api_url }: AgentDashboardProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Connect to WebSocket - use root path, not /api
-    const wsUrl = api_url.replace('http', 'ws').replace('/api', '');
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      console.log('🔌 WebSocket connected');
-      setConnected(true);
+    // Try WebSocket connection, fallback to polling if not available
+    let pollInterval: NodeJS.Timeout | null = null;
+    
+    const startPolling = () => {
+      if (pollInterval) return;
+      // Poll activities every 5 seconds
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(`${api_url}/agent/activities?limit=20`);
+          if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data)) {
+              setActivities(data);
+            }
+          }
+        } catch (err) {
+          // Silent fail for polling
+        }
+      }, 5000);
     };
+    
+    try {
+      const wsUrl = api_url.replace('http', 'ws').replace('/api', '');
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
 
-    ws.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      
-      if (data.type === 'initial') {
-        setActivities(data.activities);
-      } else if (data.type === 'activity') {
-        setActivities(prev => [data.activity, ...prev.slice(0, 99)]);
-      }
-    };
+      ws.onopen = () => {
+        console.log('🔌 WebSocket connected');
+        setConnected(true);
+      };
 
-    ws.onclose = () => {
-      console.log('🔌 WebSocket disconnected');
-      setConnected(false);
-    };
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'initial') {
+          setActivities(data.activities);
+        } else if (data.type === 'activity') {
+          setActivities(prev => [data.activity, ...prev.slice(0, 99)]);
+        }
+      };
 
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      setConnected(false);
-    };
+      ws.onclose = () => {
+        console.log('🔌 WebSocket disconnected');
+        setConnected(false);
+        // Start polling fallback
+        startPolling();
+      };
+
+      ws.onerror = (error) => {
+        console.warn('WebSocket not available, using polling fallback');
+        setConnected(false);
+        // Start polling fallback
+        startPolling();
+      };
+    } catch (err) {
+      console.warn('WebSocket not supported, using polling fallback');
+      startPolling();
+    }
 
     // Fetch agent state
     fetchAgentState();
 
     return () => {
-      ws.close();
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
     };
   }, [api_url]);
 
