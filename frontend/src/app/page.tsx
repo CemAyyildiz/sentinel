@@ -102,6 +102,7 @@ export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [ethPrice, setEthPrice] = useState<number>(2400);
+  const [tokenPrices, setTokenPrices] = useState<{[key: string]: number}>({});
   const [walletAddress, setWalletAddress] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -114,6 +115,7 @@ export default function Home() {
     fetchStrategies();
     fetchTransactions();
     fetchPrice();
+    fetchAllTokenPrices();
     checkWalletConnection();
     
     // Simulate keeper monitoring
@@ -121,7 +123,15 @@ export default function Home() {
       updateKeeperStatuses();
     }, 3000);
     
-    return () => clearInterval(interval);
+    // Refresh token prices every 30 seconds
+    const priceInterval = setInterval(() => {
+      fetchAllTokenPrices();
+    }, 30000);
+    
+    return () => {
+      clearInterval(interval);
+      clearInterval(priceInterval);
+    };
   }, []);
 
   useEffect(() => {
@@ -211,9 +221,34 @@ export default function Home() {
     }
   };
 
+  const fetchAllTokenPrices = async () => {
+    try {
+      const res = await fetch(`${API_URL}/prices`);
+      const data = await res.json();
+      setTokenPrices(data.prices);
+      if (data.prices.ETH) {
+        setEthPrice(data.pricShort description *
+A max 100-character or less description of your project (it should fit in a tweet!)
+
+Exchange onramp/offramp using state channels hub-and-spoke model
+Description *
+Go in as much detail as you can about what this project is. Please be as clear as possible! (min 280 characters)
+
+This project combines a state channels hub and browser-based frontend to allow users to deposit and withdraw tokens to their favourite exchanges instantly. The hub is designed to...
+How it's made *
+Tell us about how you built this project; the nitty-gritty details. What technologies did you use? How are they pieced together? If you used any partner technologies, how did it benefit your project? Did you do anything particuarly hacky that's notable and worth mentioning? (min 280 characters)
+
+This project uses the @statechannels browser-based wallet behind the scenes to connect to Coinbase and Bitfinex APIs. We used MobX to design the frontend and the backend is built in Rust.
+es.ETH);
+      }
+    } catch (err) {
+      console.error('Failed to fetch token prices:', err);
+    }
+  };
+
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([fetchStrategies(), fetchTransactions(), fetchPrice()]);
+    await Promise.all([fetchStrategies(), fetchTransactions(), fetchPrice(), fetchAllTokenPrices()]);
     setRefreshing(false);
     showToast('info', 'Data refreshed');
   };
@@ -486,6 +521,40 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8 relative z-10">
+        {/* Token Prices Bar */}
+        <div className="bg-white/5 rounded-xl p-4 border border-white/10 backdrop-blur-xl mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-[#00FF88]" />
+              Live Market Prices
+            </h3>
+            <span className="text-xs text-gray-500">via CoinGecko</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+            {[
+              { symbol: 'ETH', color: 'blue', icon: '⟠' },
+              { symbol: 'BTC', color: 'orange', icon: '₿' },
+              { symbol: 'USDC', color: 'blue', icon: '$' },
+              { symbol: 'USDT', color: 'green', icon: '₮' },
+              { symbol: 'DAI', color: 'yellow', icon: '◈' },
+              { symbol: 'UNI', color: 'pink', icon: '🦄' },
+              { symbol: 'LINK', color: 'blue', icon: '⬡' }
+            ].map((token) => (
+              <div key={token.symbol} className="bg-black/30 rounded-lg p-3 border border-white/5 hover:border-[#00FF88]/30 transition-colors">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg">{token.icon}</span>
+                  <span className="text-xs font-medium text-gray-300">{token.symbol}</span>
+                </div>
+                <div className="text-sm font-bold font-mono">
+                  {tokenPrices[token.symbol] 
+                    ? `$${tokenPrices[token.symbol].toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: tokenPrices[token.symbol] < 1 ? 4 : 2 })}`
+                    : 'Loading...'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Stats Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white/5 rounded-xl p-4 border border-white/10 backdrop-blur-xl hover:border-[#00FF88]/30 transition-colors">

@@ -169,43 +169,101 @@ export async function getPools(
 }
 
 // Price cache to avoid rate limiting
-let cachedPrice: { price: number; timestamp: number } | null = null;
+interface PriceCache {
+  [token: string]: { price: number; timestamp: number };
+}
+let cachedPrices: PriceCache = {};
 const CACHE_DURATION_MS = 30 * 1000; // 30 seconds
 
-export async function getETHPrice(): Promise<number> {
-  // Return cached price if still valid
-  if (cachedPrice && Date.now() - cachedPrice.timestamp < CACHE_DURATION_MS) {
-    console.log(`[CoinGecko] Using cached ETH price: $${cachedPrice.price}`);
-    return cachedPrice.price;
+// Supported tokens with CoinGecko IDs
+const TOKEN_PRICE_MAP: { [symbol: string]: { coingeckoId: string; fallbackPrice: number } } = {
+  ETH: { coingeckoId: 'ethereum', fallbackPrice: 2400 },
+  BTC: { coingeckoId: 'bitcoin', fallbackPrice: 65000 },
+  USDC: { coingeckoId: 'usd-coin', fallbackPrice: 1 },
+  USDT: { coingeckoId: 'tether', fallbackPrice: 1 },
+  DAI: { coingeckoId: 'dai', fallbackPrice: 1 },
+  WETH: { coingeckoId: 'ethereum', fallbackPrice: 2400 },
+  UNI: { coingeckoId: 'uniswap', fallbackPrice: 7 },
+  LINK: { coingeckoId: 'chainlink', fallbackPrice: 14 },
+  AAVE: { coingeckoId: 'aave', fallbackPrice: 90 }
+};
+
+export async function getTokenPrice(token: string): Promise<number> {
+  const tokenInfo = TOKEN_PRICE_MAP[token.toUpperCase()];
+  if (!tokenInfo) {
+    console.warn(`[CoinGecko] Unknown token: ${token}, using fallback price of $1`);
+    return 1;
   }
 
-  // Use CoinGecko as primary price source (free, no API key needed)
+  const cacheKey = token.toUpperCase();
+  const cached = cachedPrices[cacheKey];
+  
+  // Return cached price if still valid
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION_MS) {
+    console.log(`[CoinGecko] Using cached ${token} price: $${cached.price}`);
+    return cached.price;
+  }
+
+  // Fetch from CoinGecko
   try {
-    console.log('[CoinGecko] Fetching real ETH price...');
-    const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+    console.log(`[CoinGecko] Fetching real ${token} price...`);
+    const res = await fetch(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${tokenInfo.coingeckoId}&vs_currencies=usd`
+    );
+    
     if (!res.ok) {
       throw new Error(`CoinGecko API error: ${res.status}`);
     }
-    const data = await res.json() as { ethereum: { usd: number } };
-    const price = data.ethereum?.usd;
-    if (!price || price > 100000 || price < 100) {
+    
+    const data = await res.json() as { [key: string]: { usd: number } };
+    const price = data[tokenInfo.coingeckoId]?.usd;
+    
+    if (!price || price <= 0) {
       throw new Error(`Invalid price from CoinGecko: ${price}`);
     }
-    console.log(`[CoinGecko] ETH price: $${price}`);
+    
+    console.log(`[CoinGecko] ${token} price: $${price}`);
     
     // Update cache
-    cachedPrice = { price, timestamp: Date.now() };
+    cachedPrices[cacheKey] = { price, timestamp: Date.now() };
     
     return price;
   } catch (error) {
-    console.error('[CoinGecko] Failed to fetch ETH price:', error);
+    console.error(`[CoinGecko] Failed to fetch ${token} price:`, error);
     
     // If we have a cached price, use it even if expired
-    if (cachedPrice) {
-      console.log(`[CoinGecko] Using expired cached price: $${cachedPrice.price}`);
-      return cachedPrice.price;
+    if (cached) {
+      console.log(`[CoinGecko] Using expired cached ${token} price: $${cached.price}`);
+      return cached.price;
     }
     
-    throw new Error('Unable to fetch real ETH price. CoinGecko API is unavailable.');
+    // Use fallback price
+    console.log(`[CoinGecko] Using fallback ${token} price: $${tokenInfo.fallbackPrice}`);
+    return tokenInfo.fallbackPrice;
   }
+}
+
+export async function getETHPrice(): Promise<number> {
+  return getTokenPrice('ETH');
+}
+
+export async function getAllTokenPrices(): Promise<{ [token: string]: number }> {
+  const tokens = ['ETH', 'BTC', 'USDC', 'USDT', 'DAI', 'UNI', 'LINK'];
+  const prices: { [token: string]: number } = {};
+  
+  // Fetch all prices in parallel
+  const results = await Promise.allSettled(
+    tokens.map(async (token) => {
+      const price = await getTokenPrice(token);
+      return { token, price };
+    })
+  );
+  
+  for (const result of results) {
+    if (result.status === 'fulfilled') {
+      prices[result.value.token] = result.value.price;
+    }
+  }
+  
+  return prices;
 }

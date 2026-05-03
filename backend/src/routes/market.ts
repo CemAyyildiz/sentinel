@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getQuote, getPools, getETHPrice } from '../services/uniswap';
+import { getQuote, getPools, getETHPrice, getTokenPrice, getAllTokenPrices } from '../services/uniswap';
 import { getMarketSignal } from '../services/zeroG';
 
 const router = Router();
@@ -51,6 +51,29 @@ router.get('/price', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Price error:', error);
     res.status(500).json({ error: 'Failed to get price' });
+  }
+});
+
+// GET /api/price/:token - Get price for a specific token
+router.get('/price/:token', async (req: Request, res: Response) => {
+  try {
+    const token = req.params.token as string;
+    const price = await getTokenPrice(token);
+    res.json({ token: token.toUpperCase(), price, timestamp: Date.now() });
+  } catch (error) {
+    console.error('Token price error:', error);
+    res.status(500).json({ error: 'Failed to get token price' });
+  }
+});
+
+// GET /api/prices - Get all token prices
+router.get('/prices', async (req: Request, res: Response) => {
+  try {
+    const prices = await getAllTokenPrices();
+    res.json({ prices, timestamp: Date.now() });
+  } catch (error) {
+    console.error('Prices error:', error);
+    res.status(500).json({ error: 'Failed to get prices' });
   }
 });
 
