@@ -227,19 +227,7 @@ export default function Home() {
       const data = await res.json();
       setTokenPrices(data.prices);
       if (data.prices.ETH) {
-        setEthPrice(data.pricShort description *
-A max 100-character or less description of your project (it should fit in a tweet!)
-
-Exchange onramp/offramp using state channels hub-and-spoke model
-Description *
-Go in as much detail as you can about what this project is. Please be as clear as possible! (min 280 characters)
-
-This project combines a state channels hub and browser-based frontend to allow users to deposit and withdraw tokens to their favourite exchanges instantly. The hub is designed to...
-How it's made *
-Tell us about how you built this project; the nitty-gritty details. What technologies did you use? How are they pieced together? If you used any partner technologies, how did it benefit your project? Did you do anything particuarly hacky that's notable and worth mentioning? (min 280 characters)
-
-This project uses the @statechannels browser-based wallet behind the scenes to connect to Coinbase and Bitfinex APIs. We used MobX to design the frontend and the backend is built in Rust.
-es.ETH);
+        setEthPrice(data.prices.ETH);
       }
     } catch (err) {
       console.error('Failed to fetch token prices:', err);
