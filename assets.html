@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinel - Hackathon Assets</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0f;
+            color: white;
+            padding: 40px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #00FF88;
+        }
+        .section {
+            margin-bottom: 60px;
+        }
+        .section h2 {
+            margin-bottom: 20px;
+            color: #888;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .asset-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            justify-content: center;
+        }
+        
+        /* Logo - 512x512 */
+        .logo {
+            width: 512px;
+            height: 512px;
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
+            border-radius: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(0, 255, 136, 0.3);
+        }
+        .logo::before {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(0, 255, 136, 0.15) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .logo-shield {
+            width: 200px;
+            height: 240px;
+            position: relative;
+            z-index: 1;
+        }
+        .logo-shield svg {
+            width: 100%;
+            height: 100%;
+        }
+        .logo-text {
+            font-size: 48px;
+            font-weight: 700;
+            margin-top: 20px;
+            background: linear-gradient(90deg, #00FF88, #00D4FF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            z-index: 1;
+        }
+        
+        /* Banner - 16:9 (640x360) */
+        .banner {
+            width: 640px;
+            height: 360px;
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #0a0a0f 100%);
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            padding: 40px;
+        }
+        .banner::before {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(0, 255, 136, 0.2) 0%, transparent 70%);
+            right: -100px;
+            top: -100px;
+        }
+        .banner::after {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(0, 212, 255, 0.15) 0%, transparent 70%);
+            left: -50px;
+            bottom: -50px;
+        }
+        .banner-content {
+            position: relative;
+            z-index: 1;
+        }
+        .banner-logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .banner-logo svg {
+            width: 60px;
+            height: 72px;
+        }
+        .banner-logo span {
+            font-size: 36px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #00FF88, #00D4FF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .banner h2 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: white;
+        }
+        .banner p {
+            font-size: 16px;
+            color: #888;
+            max-width: 350px;
+        }
+        .banner-features {
+            position: absolute;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .banner-feature {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #00FF88;
+        }
+        
+        /* Screenshots */
+        .screenshot {
+            width: 800px;
+            height: 450px;
+            background: #0a0a0f;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .screenshot-header {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .screenshot-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .screenshot-dot.red { background: #ff5f56; }
+        .screenshot-dot.yellow { background: #ffbd2e; }
+        .screenshot-dot.green { background: #27ca40; }
+        .screenshot-url {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #888;
+            margin-left: 10px;
+        }
+        .screenshot-content {
+            padding: 20px;
+            height: calc(100% - 44px);
+            overflow: hidden;
+        }
+        
+        /* Screenshot 1 - Main Dashboard */
+        .dashboard-preview {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: 100%;
+        }
+        .dashboard-left {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .strategy-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .strategy-input h3 {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        .strategy-input textarea {
+            width: 100%;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            color: white;
+            font-size: 13px;
+            resize: none;
+        }
+        .strategy-btn {
+            background: linear-gradient(90deg, #00FF88, #00D4FF);
+            color: black;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        .active-strategies {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            flex: 1;
+        }
+        .active-strategies h3 {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        .strategy-item {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+        .strategy-item h4 {
+            font-size: 13px;
+            color: #00FF88;
+            margin-bottom: 4px;
+        }
+        .strategy-item p {
+            font-size: 11px;
+            color: #888;
+        }
+        .dashboard-right {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+        }
+        .dashboard-right h3 {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .activity-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        .activity-icon.thinking { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
+        .activity-icon.success { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .activity-icon.monitoring { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        .activity-text {
+            flex: 1;
+        }
+        .activity-text p {
+            font-size: 12px;
+            color: #ccc;
+        }
+        .activity-text span {
+            font-size: 10px;
+            color: #666;
+        }
+        
+        /* Screenshot 2 - Swarm Panel */
+        .swarm-preview {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: 100%;
+        }
+        .agents-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .agent-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .agent-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .agent-icon.architect { background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(59, 130, 246, 0.1)); }
+        .agent-icon.executor { background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.1)); }
+        .agent-icon.monitor { background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(168, 85, 247, 0.1)); }
+        .agent-info h4 {
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        .agent-info p {
+            font-size: 11px;
+            color: #888;
+            font-family: monospace;
+        }
+        .agent-status {
+            margin-left: auto;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+        }
+        .agent-status.idle { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
+        .agent-status.working { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+        .task-queue {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+        }
+        .task-queue h3 {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .task-queue h3 span {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00FF88;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+        }
+        .task-item {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+        .task-item h4 {
+            font-size: 12px;
+            color: #ccc;
+            margin-bottom: 6px;
+        }
+        .task-item p {
+            font-size: 10px;
+            color: #666;
+        }
+        
+        /* Screenshot 3 - iNFT & Storage */
+        .inft-storage-preview {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            height: 100%;
+        }
+        .inft-panel, .storage-panel {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+        }
+        .panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .panel-header h3 {
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .panel-header .status {
+            font-size: 10px;
+            padding: 4px 8px;
+            border-radius: 10px;
+        }
+        .panel-header .status.connected { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .inft-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .inft-card h4 {
+            font-size: 13px;
+            color: #f0abfc;
+            margin-bottom: 4px;
+        }
+        .inft-card p {
+            font-size: 10px;
+            color: #888;
+            font-family: monospace;
+        }
+        .inft-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .inft-meta-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px;
+            border-radius: 6px;
+        }
+        .inft-meta-item span {
+            font-size: 9px;
+            color: #666;
+            display: block;
+        }
+        .inft-meta-item p {
+            font-size: 10px;
+            color: #ccc;
+            margin-top: 2px;
+        }
+        .storage-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .storage-stat {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .storage-stat span {
+            font-size: 10px;
+            color: #666;
+            display: block;
+        }
+        .storage-stat p {
+            font-size: 18px;
+            font-weight: bold;
+            color: #22d3ee;
+            margin-top: 4px;
+        }
+        .storage-entry {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .storage-entry .key {
+            font-size: 11px;
+            font-family: monospace;
+            color: #ccc;
+        }
+        .storage-entry .type {
+            font-size: 9px;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        .storage-entry .type.memory { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
+        .storage-entry .type.state { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .storage-entry .type.strategy { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+        
+        .download-hint {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 8px;
+            color: #00FF88;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🛡️ Sentinel - Hackathon Assets</h1>
+    
+    <!-- Logo Section -->
+    <div class="section">
+        <h2>Logo (512x512)</h2>
+        <div class="asset-container">
+            <div class="logo">
+                <div class="logo-shield">
+                    <svg viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M50 5L95 25V65C95 90 50 115 50 115C50 115 5 90 5 65V25L50 5Z" 
+                              stroke="url(#gradient)" stroke-width="3" fill="rgba(0, 255, 136, 0.1)"/>
+                        <path d="M50 30L70 42V62C70 75 50 88 50 88C50 88 30 75 30 62V42L50 30Z" 
+                              fill="url(#gradient)" opacity="0.3"/>
+                        <circle cx="50" cy="55" r="12" fill="#00FF88"/>
+                        <path d="M45 55L48 58L55 51" stroke="#0a0a0f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#00FF88"/>
+                                <stop offset="100%" stop-color="#00D4FF"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="logo-text">SENTINEL</div>
+            </div>
+        </div>
+        <div class="download-hint">💡 Right-click the logo and "Save image as..." to download</div>
+    </div>
+    
+    <!-- Banner Section -->
+    <div class="section">
+        <h2>Cover Image / Banner (640x360)</h2>
+        <div class="asset-container">
+            <div class="banner">
+                <div class="banner-content">
+                    <div class="banner-logo">
+                        <svg viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M50 5L95 25V65C95 90 50 115 50 115C50 115 5 90 5 65V25L50 5Z" 
+                                  stroke="url(#gradient2)" stroke-width="3" fill="rgba(0, 255, 136, 0.1)"/>
+                            <circle cx="50" cy="55" r="12" fill="#00FF88"/>
+                            <path d="M45 55L48 58L55 51" stroke="#0a0a0f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <defs>
+                                <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stop-color="#00FF88"/>
+                                    <stop offset="100%" stop-color="#00D4FF"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <span>SENTINEL</span>
+                    </div>
+                    <h2>Autonomous DeFi Agent Platform</h2>
+                    <p>Describe your trading strategy in plain English, and let AI-powered multi-agent swarms execute it automatically on-chain.</p>
+                </div>
+                <div class="banner-features">
+                    <div class="banner-feature">🤖 Multi-Agent Swarm</div>
+                    <div class="banner-feature">🧠 AI-Powered</div>
+                    <div class="banner-feature">⚡ Real Execution</div>
+                    <div class="banner-feature">🔗 0G Storage</div>
+                </div>
+            </div>
+        </div>
+        <div class="download-hint">💡 Right-click the banner and "Save image as..." to download</div>
+    </div>
+    
+    <!-- Screenshots Section -->
+    <div class="section">
+        <h2>Screenshots</h2>
+        <div class="asset-container">
+            <!-- Screenshot 1 - Main Dashboard -->
+            <div class="screenshot">
+                <div class="screenshot-header">
+                    <div class="screenshot-dot red"></div>
+                    <div class="screenshot-dot yellow"></div>
+                    <div class="screenshot-dot green"></div>
+                    <div class="screenshot-url">localhost:3000</div>
+                </div>
+                <div class="screenshot-content">
+                    <div class="dashboard-preview">
+                        <div class="dashboard-left">
+                            <div class="strategy-input">
+                                <h3>🎯 Strategy Creator</h3>
+                                <textarea>Buy 1 ETH with USDC when price drops below $2,400, execute within 5 minutes, max 1% slippage</textarea>
+                                <button class="strategy-btn">Parse Strategy</button>
+                            </div>
+                            <div class="active-strategies">
+                                <h3>Active Strategies</h3>
+                                <div class="strategy-item">
+                                    <h4>ETH Dip Buyer</h4>
+                                    <p>Buy 1 ETH when price < $2,400</p>
+                                </div>
+                                <div class="strategy-item">
+                                    <h4>USDC Accumulator</h4>
+                                    <p>DCA 100 USDC into ETH weekly</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dashboard-right">
+                            <h3>🧠 Agent Activity Feed</h3>
+                            <div class="activity-item">
+                                <div class="activity-icon thinking">💭</div>
+                                <div class="activity-text">
+                                    <p>Architect parsing strategy...</p>
+                                    <span>2 seconds ago</span>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-icon success">✓</div>
+                                <div class="activity-text">
+                                    <p>Route validated: ETH → USDC</p>
+                                    <span>5 seconds ago</span>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-icon monitoring">👁</div>
+                                <div class="activity-text">
+                                    <p>Monitor watching ETH price...</p>
+                                    <span>10 seconds ago</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Screenshot 2 - Swarm Panel -->
+            <div class="screenshot">
+                <div class="screenshot-header">
+                    <div class="screenshot-dot red"></div>
+                    <div class="screenshot-dot yellow"></div>
+                    <div class="screenshot-dot green"></div>
+                    <div class="screenshot-url">localhost:3000 - Multi-Agent Swarm</div>
+                </div>
+                <div class="screenshot-content">
+                    <div class="swarm-preview">
+                        <div class="agents-grid">
+                            <div class="agent-card">
+                                <div class="agent-icon architect">🏗️</div>
+                                <div class="agent-info">
+                                    <h4>Architect</h4>
+                                    <p>architect.sentinelswap.eth</p>
+                                </div>
+                                <div class="agent-status idle">Idle</div>
+                            </div>
+                            <div class="agent-card">
+                                <div class="agent-icon executor">⚙️</div>
+                                <div class="agent-info">
+                                    <h4>Executor</h4>
+                                    <p>executor.sentinelswap.eth</p>
+                                </div>
+                                <div class="agent-status working">Working</div>
+                            </div>
+                            <div class="agent-card">
+                                <div class="agent-icon monitor">👁</div>
+                                <div class="agent-info">
+                                    <h4>Monitor</h4>
+                                    <p>monitor.sentinelswap.eth</p>
+                                </div>
+                                <div class="agent-status working">Working</div>
+                            </div>
+                        </div>
+                        <div class="task-queue">
+                            <h3>Task Queue <span>+ New Task</span></h3>
+                            <div class="task-item">
+                                <h4>Analyze market conditions</h4>
+                                <p>Assigned: Architect • In Progress</p>
+                            </div>
+                            <div class="task-item">
+                                <h4>Execute ETH swap</h4>
+                                <p>Assigned: Executor • Pending</p>
+                            </div>
+                            <div class="task-item">
+                                <h4>Monitor price feed</h4>
+                                <p>Assigned: Monitor • Active</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Screenshot 3 - iNFT & Storage -->
+            <div class="screenshot">
+                <div class="screenshot-header">
+                    <div class="screenshot-dot red"></div>
+                    <div class="screenshot-dot yellow"></div>
+                    <div class="screenshot-dot green"></div>
+                    <div class="screenshot-url">localhost:3000 - iNFT & Storage</div>
+                </div>
+                <div class="screenshot-content">
+                    <div class="inft-storage-preview">
+                        <div class="inft-panel">
+                            <div class="panel-header">
+                                <h3>✨ iNFT Agents</h3>
+                                <span class="status connected">connected</span>
+                            </div>
+                            <div class="inft-card">
+                                <h4>Architecture Agent</h4>
+                                <p>architect-agent-001</p>
+                                <div class="inft-meta">
+                                    <div class="inft-meta-item">
+                                        <span>Token ID</span>
+                                        <p>demo-token-001</p>
+                                    </div>
+                                    <div class="inft-meta-item">
+                                        <span>Role</span>
+                                        <p>architect</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button style="width: 100%; padding: 10px; background: rgba(232, 121, 249, 0.2); border: 1px solid rgba(232, 121, 249, 0.3); border-radius: 8px; color: #e879f9; cursor: pointer;">Mint Demo iNFT</button>
+                        </div>
+                        <div class="storage-panel">
+                            <div class="panel-header">
+                                <h3>💾 0G Storage</h3>
+                                <span class="status connected">Connected</span>
+                            </div>
+                            <div class="storage-stats">
+                                <div class="storage-stat">
+                                    <span>Total Keys</span>
+                                    <p>12</p>
+                                </div>
+                                <div class="storage-stat">
+                                    <span>Total Size</span>
+                                    <p>48.5 KB</p>
+                                </div>
+                            </div>
+                            <div class="storage-entry">
+                                <span class="key">agent:architect:memory</span>
+                                <span class="type memory">memory</span>
+                            </div>
+                            <div class="storage-entry">
+                                <span class="key">swarm:coordination:state</span>
+                                <span class="type state">state</span>
+                            </div>
+                            <div class="storage-entry">
+                                <span class="key">strategies:active:list</span>
+                                <span class="type strategy">strategy</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="download-hint">💡 Right-click each screenshot and "Save image as..." to download</div>
+    </div>
+</body>
+</html>
