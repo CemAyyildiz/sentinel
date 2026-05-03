@@ -8,7 +8,7 @@ import INFTPanel from '@/components/iNFTPanel';
 import ZeroGStoragePanel from '@/components/ZeroGStoragePanel';
 
 const API_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
-  ? '/_/backend/api'
+  ? '/api'
   : 'http://localhost:3001/api';
 
 interface Strategy {
