@@ -7,7 +7,9 @@ import SwarmPanel from '@/components/SwarmPanel';
 import INFTPanel from '@/components/iNFTPanel';
 import ZeroGStoragePanel from '@/components/ZeroGStoragePanel';
 
-const API_URL = 'http://localhost:3001/api';
+const API_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+  ? '/_/backend/api'
+  : 'http://localhost:3001/api';
 
 interface Strategy {
   id: string;
