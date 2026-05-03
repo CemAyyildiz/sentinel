@@ -51,21 +51,7 @@ export async function createKeeperTask(strategy: Strategy): Promise<string> {
     return taskId;
   } catch (error) {
     console.error('[KeeperHub] Failed to create task:', error);
-    
-    // Create a local fallback task but mark it clearly
-    const taskId = 'kh_local_' + Date.now().toString(36);
-    console.log(`[KeeperHub] Using local fallback task ID: ${taskId}`);
-    console.log('[KeeperHub] ⚠️ WARNING: This is NOT a real KeeperHub task. API is unreachable.');
-    
-    taskStore.set(taskId, {
-      id: taskId,
-      name: strategy.name,
-      status: 'active',
-      trigger: taskConfig.trigger,
-      action: taskConfig.action,
-      createdAt: new Date().toISOString()
-    });
-    return taskId;
+    throw new Error(`KeeperHub API is unavailable: ${error instanceof Error ? error.message : 'Unknown error'}. Cannot create real task.`);
   }
 }
 

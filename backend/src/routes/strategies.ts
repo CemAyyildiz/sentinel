@@ -114,6 +114,7 @@ router.post('/deploy', async (req: Request, res: Response) => {
       strategy.wallet_address = walletAddress;
     }
 
+    console.log(`[Deploy] Deploying strategy: ${strategy.name} (${strategy.action_type})`);
     const taskId = await createKeeperTask(strategy);
     updateStrategyStatus(strategyId, 'active', taskId);
 
@@ -123,8 +124,9 @@ router.post('/deploy', async (req: Request, res: Response) => {
       message: 'Strategy deployed successfully'
     });
   } catch (error) {
-    console.error('Deploy error:', error);
-    res.status(500).json({ error: 'Failed to deploy strategy' });
+    console.error('[Deploy] Deploy error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Failed to deploy strategy';
+    res.status(500).json({ error: errorMessage });
   }
 });
 

@@ -122,12 +122,8 @@ export async function executeSwap(
       gasUsed: data.gasUsed || quoteResult.gasEstimate || '150000'
     };
   } catch (error) {
-    console.error('Swap execution error:', error);
-    // Return mock hash for development
-    return {
-      hash: '0x' + Math.random().toString(16).slice(2) + Date.now().toString(16),
-      gasUsed: quoteResult.gasEstimate || '150000'
-    };
+    console.error('[Uniswap] Swap execution error:', error);
+    throw new Error(`Swap execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

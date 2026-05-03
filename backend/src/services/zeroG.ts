@@ -111,30 +111,33 @@ function parseWithRules(prompt: string): ExtendedParsedStrategy {
   const steps: StrategyStep[] = [];
   let name = '';
 
-  // Check for APR trigger
+  // Check for APR trigger (alert, NOT swap)
   if (lower.includes('apr') || lower.includes('yield') || lower.includes('pool')) {
-    triggerType = 'apr';
-    const aprMatch = prompt.match(/(\d+(?:\.\d+)?)\s*%/);
-    if (aprMatch) {
-      triggerValue = parseFloat(aprMatch[1]);
-    } else {
-      triggerValue = 20;
+    // Only treat as alert if no buy/sell/swap keywords
+    if (!lower.includes('buy') && !lower.includes('sell') && !lower.includes('swap')) {
+      triggerType = 'apr';
+      const aprMatch = prompt.match(/(\d+(?:\.\d+)?)\s*%/);
+      if (aprMatch) {
+        triggerValue = parseFloat(aprMatch[1]);
+      } else {
+        triggerValue = 20;
+      }
+      triggerDirection = lower.includes('exceed') || lower.includes('above') || lower.includes('over') ? 'above' : 'below';
+      
+      // Extract pool tokens
+      const poolMatch = prompt.match(/(\w+)\/(\w+)/i);
+      if (poolMatch) {
+        triggerToken = `${poolMatch[1]}/${poolMatch[2]}`;
+      }
+      
+      // Alert action - NO swap steps!
+      actionType = 'alert';
+      tokenIn = null as any;
+      tokenOut = null as any;
+      amount = null as any;
+      name = `Alert: ${triggerToken} APR ${triggerDirection} ${triggerValue}%`;
+      // No steps for alerts - they are notifications only
     }
-    triggerDirection = lower.includes('exceed') || lower.includes('above') || lower.includes('over') ? 'above' : 'below';
-    
-    // Extract pool tokens
-    const poolMatch = prompt.match(/(\w+)\/(\w+)/i);
-    if (poolMatch) {
-      triggerToken = `${poolMatch[1]}/${poolMatch[2]}`;
-    }
-    
-    // Alert action - NOT swap!
-    actionType = 'alert';
-    tokenIn = null as any;
-    tokenOut = null as any;
-    amount = null as any;
-    name = `Alert: ${triggerToken} APR ${triggerDirection} ${triggerValue}%`;
-    steps.push({ type: 'swap', tokenIn: 'USDC', tokenOut: 'ETH', amount: '0' });
   }
   // Check for price trigger with specific amount
   else if (lower.includes('buy') || lower.includes('al')) {

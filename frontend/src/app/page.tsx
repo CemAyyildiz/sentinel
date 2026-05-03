@@ -445,7 +445,7 @@ export default function Home() {
             </button>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
               <div className="w-2 h-2 rounded-full bg-[#00FF88] animate-pulse"></div>
-              <span className="text-sm text-gray-300 font-mono">ETH ${ethPrice.toLocaleString()}</span>
+              <span className="text-sm text-gray-300 font-mono">ETH ${ethPrice.toFixed(2)}</span>
             </div>
             {isConnected ? (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#00FF88]/10 border border-[#00FF88]/30">
@@ -508,7 +508,7 @@ export default function Home() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-gray-400">ETH Price</p>
-                <p className="text-2xl font-bold font-mono">${ethPrice.toLocaleString()}</p>
+                <p className="text-2xl font-bold font-mono">${ethPrice.toFixed(2)}</p>
               </div>
               <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-yellow-400" />
@@ -637,7 +637,7 @@ export default function Home() {
                                     {msg.strategy.trigger.type === 'apr' ? (
                                       `${msg.strategy.trigger.token} Pool APR ${msg.strategy.trigger.direction} ${msg.strategy.trigger.value}%`
                                     ) : (
-                                      `${msg.strategy.trigger.token} ${msg.strategy.trigger.direction} $${msg.strategy.trigger.value.toLocaleString()}`
+                                      `${msg.strategy.trigger.token} ${msg.strategy.trigger.direction} $${msg.strategy.trigger.value.toFixed(2)}`
                                     )}
                                   </div>
                                 </div>
@@ -756,7 +756,7 @@ export default function Home() {
                           )}
                           
                           <div className="text-xs text-gray-500 mt-2">
-                            {msg.timestamp.toLocaleTimeString()}
+                            {`${msg.timestamp.getHours().toString().padStart(2, '0')}:${msg.timestamp.getMinutes().toString().padStart(2, '0')}:${msg.timestamp.getSeconds().toString().padStart(2, '0')}`}
                           </div>
                         </>
                       )}
@@ -998,9 +998,9 @@ export default function Home() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                     <div className="p-3 rounded-lg bg-black/30 border border-white/5">
                       <div className="text-xs text-gray-500">Trigger</div>
-                      <div className="font-medium text-sm font-mono">
-                        {strategy.trigger_params?.token} {strategy.trigger_params?.direction} ${strategy.trigger_params?.value}
-                      </div>
+                        <div className="font-medium text-sm font-mono">
+                          {strategy.trigger_params?.token} {strategy.trigger_params?.direction} ${strategy.trigger_params?.value?.toFixed(2)}
+                        </div>
                     </div>
                     <div className="p-3 rounded-lg bg-black/30 border border-white/5">
                       <div className="text-xs text-gray-500">Action</div>
@@ -1012,12 +1012,15 @@ export default function Home() {
                       <div className="text-xs text-gray-500">Type</div>
                       <div className="font-medium text-sm capitalize">{strategy.trigger_type}</div>
                     </div>
-                    <div className="p-3 rounded-lg bg-black/30 border border-white/5">
-                      <div className="text-xs text-gray-500">Created</div>
-                      <div className="font-medium text-sm">
-                        {new Date(strategy.created_at).toLocaleDateString()}
+                      <div className="p-3 rounded-lg bg-black/30 border border-white/5">
+                        <div className="text-xs text-gray-500">Created</div>
+                        <div className="font-medium text-sm">
+                          {(() => {
+                            const d = new Date(strategy.created_at);
+                            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                          })()}
+                        </div>
                       </div>
-                    </div>
                   </div>
                   <div className="flex gap-2">
                     {strategy.status === 'active' && (
@@ -1110,7 +1113,10 @@ export default function Home() {
                     <div className="p-3 rounded-lg bg-black/30 border border-white/5">
                       <div className="text-xs text-gray-500">Time</div>
                       <div className="font-medium text-sm">
-                        {new Date(tx.created_at).toLocaleString()}
+                        {(() => {
+                          const d = new Date(tx.created_at);
+                          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                        })()}
                       </div>
                     </div>
                   </div>
